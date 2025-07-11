@@ -242,7 +242,6 @@
     </div>
     
     <script>
-        // Full JavaScript code follows...
         const ICONS = {
             edit: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pen" viewBox="0 0 16 16"><path d="m13.498.795.149-.149a1.207 1.207 0 1 1 1.707 1.708l-.149.148a1.5 1.5 0 0 1-.059 2.059L4.854 14.854a.5.5 0 0 1-.233.131l-4 1a.5.5 0 0 1-.606-.606l1-4a.5.5 0 0 1 .131-.232l9.642-9.642a.5.5 0 0 0-.642.056L6.854 4.854a.5.5 0 1 1-.708-.708L9.44.854A1.5 1.5 0 0 1 11.5.796a1.5 1.5 0 0 1 1.998-.001m-.644.766a.5.5 0 0 0-.707 0L1.95 11.756l-.764 3.057 3.057-.764L14.44 3.854a.5.5 0 0 0 0-.708z"/></svg> <span>編集モード</span>`,
             view: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye" viewBox="0 0 16 16"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/></svg> <span>視聴モード</span>`,
@@ -344,19 +343,14 @@
             try {
                 const apiKey = localStorage.getItem('youtube_api_key');
                 if (!apiKey) throw new Error('APIキーが設定されていません。右上の設定ボタンからキーを入力してください。');
-                
+                const params = query ? { part: 'snippet', q: query, type: 'video', maxResults: 20 } : { part: 'snippet,contentDetails,statistics', chart: 'mostPopular', regionCode: 'JP', maxResults: 20 };
                 const endpoint = query ? 'search' : 'videos';
-                const params = query 
-                    ? { part: 'snippet', q: query, type: 'video', maxResults: 20 } 
-                    : { part: 'snippet,contentDetails,statistics', chart: 'mostPopular', regionCode: 'JP', maxResults: 20 };
-
                 const data = await apiRequest(endpoint, params);
                 let videos = query ? await processSearchResults(data.items) : data.items;
-                
                 app.home.container.innerHTML = `<h2>${query ? `"${query}" の検索結果` : 'おすすめの動画'}</h2>`;
                 const videoGrid = document.createElement('div');
                 videoGrid.className = 'video-grid';
-                videos.forEach(video => { videoGrid.appendChild(createVideoCard(video)); });
+                videos.forEach(video => { if(video) videoGrid.appendChild(createVideoCard(video)); });
                 app.home.container.appendChild(videoGrid);
             } catch (e) {
                 app.home.container.innerHTML = `<h2>エラー: ${e.message}</h2>`;
@@ -409,7 +403,7 @@
             const videoIds = items.map(item => item.id.videoId).filter(Boolean);
             if (!videoIds.length) return [];
             const videoDetails = await apiRequest('videos', { part: 'snippet,statistics', id: videoIds.join(',') });
-            return items.map(item => videoDetails.items.find(detail => detail.id === item.id.videoId) || item);
+            return items.map(item => videoDetails.items.find(detail => detail.id === item.id.videoId));
         }
 
         function parseApiData(video, channel, commentsData) {
@@ -456,9 +450,9 @@
             app.watch.channelIcon.src = channel.iconUrl;
             
             const channelNameView = app.watch.channelName.querySelector('.view-element');
-            // Clear existing text nodes before adding new one
+            // Clear previous text nodes to prevent duplication
             Array.from(channelNameView.childNodes).forEach(node => {
-                if(node.nodeType === Node.TEXT_NODE) node.remove();
+                if (node.nodeType === Node.TEXT_NODE) node.remove();
             });
             channelNameView.prepend(document.createTextNode(channel.name.view));
             const channelNameEdit = app.watch.channelName.querySelector('.edit-element');
@@ -497,9 +491,7 @@
             const card = document.createElement('div'); card.className = 'video-card';
             card.addEventListener('click', () => navigateTo('watch', { videoId: video.id.videoId || video.id }));
             const snippet = video.snippet, stats = video.statistics;
-            const viewCountText = stats ? `${formatNumberWithUnit(stats.viewCount)} 回視聴` : '';
-            const dateText = formatDate(snippet.publishedAt);
-            card.innerHTML = `<img class="video-thumbnail" src="${snippet.thumbnails.high.url}" alt="${snippet.title}"><div class="video-card-meta"><div><h3 class="video-card-title">${snippet.title}</h3><div class="video-card-channel">${snippet.channelTitle}</div><div class="video-card-stats">${viewCountText} • ${dateText}</div></div></div>`;
+            card.innerHTML = `<img class="video-thumbnail" src="${snippet.thumbnails.high.url}" alt="${snippet.title}"><div class="video-card-meta"><div><h3 class="video-card-title">${snippet.title}</h3><div class="video-card-channel">${snippet.channelTitle}</div><div class="video-card-stats">${stats ? `${formatNumberWithUnit(stats.viewCount)} 回視聴` : ''} • ${formatDate(snippet.publishedAt)}</div></div></div>`;
             return card;
         }
 
@@ -558,7 +550,7 @@
                     }
                 });
                 alert('すべての変更がリセットされました。');
-                if (state.currentPage === 'watch' && state.originalData) {
+                if (state.currentPage === 'watch') {
                     displayData(state.originalData);
                 }
             }
@@ -579,6 +571,12 @@
             const nameContainer = app.watch.channelName.querySelector('.view-element');
             nameContainer.classList.toggle('is-verified', isVerified);
             app.watch.verifiedSwitch.checked = isVerified;
+            let badge = nameContainer.querySelector('.verified-badge');
+            if (isVerified && !badge) {
+                badge = document.createElement('span'); badge.className = 'verified-badge';
+                badge.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-patch-check" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10.354 6.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7 8.793l2.646-2.647a.5.5 0 0 1 .708 0"/><path d="m10.273 2.513-.921-.944.715-.698.622.637.89-.011a2.89 2.89 0 0 1 2.924 2.924l-.01.89.636.622a2.89 2.89 0 0 1 0 4.134l-.637.622.011.89a2.89 2.89 0 0 1-2.924 2.924l-.89-.01-.622.636a2.89 2.89 0 0 1-4.134 0l-.622-.637-.89.011a2.89 2.89 0 0 1-2.924-2.924l.01-.89-.636-.622a2.89 2.89 0 0 1 0-4.134l.637-.622-.011-.89a2.89 2.89 0 0 1 2.924-2.924l.89.01.622-.636a2.89 2.89 0 0 1 4.134 0l-.715.698a1.89 1.89 0 0 0-2.704 0l-.92.944-1.32-.016a1.89 1.89 0 0 0-1.911 1.912l.016 1.318-.944.921a1.89 1.89 0 0 0 0 2.704l.944.92-.016 1.32a1.89 1.89 0 0 0 1.912 1.911l1.318-.016.921.944a1.89 1.89 0 0 0 2.704 0l.92-.944 1.32.016a1.89 1.89 0 0 0 1.911-1.912l-.016-1.318.944-.921a1.89 1.89 0 0 0 0-2.704l-.944-.92.016-1.32a1.89 1.89 0 0 0-1.912-1.911z"/></svg>`;
+                nameContainer.appendChild(badge);
+            }
         }
 
         async function handleSearchInput() {
