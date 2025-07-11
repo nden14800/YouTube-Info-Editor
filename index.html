@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Info Editor</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #ffffff; --primary-text-color: #0f0f0f; --secondary-text-color: #606060; --surface-color: #f2f2f2; --surface-hover-color: #e5e5e5; --border-color: #cccccc; --input-bg: #ffffff; --icon-fill: #030303; --link-color: #065fd4; --yt-red: #ff0000;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #0f0f0f; --primary-text-color: #f1f1f1; --secondary-text-color: #aaaaaa; --surface-color: #272727; --surface-hover-color: #3f3f3f; --border-color: #3f3f3f; --input-bg: #121212; --icon-fill: #ffffff; --link-color: #3ea6ff;
+            }
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; }
+        body { font-family: 'Roboto', sans-serif; background-color: var(--bg-color); color: var(--primary-text-color); transition: background-color 0.3s, color 0.3s; line-height: 1.5; display: flex; flex-direction: column; }
+        
+        #app-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; height: 56px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+        #app-main { flex-grow: 1; overflow-y: auto; overflow-x: hidden; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .container { max-width: 1700px; margin: 0 auto; padding: 24px; }
+        .watch-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+        @media (max-width: 1000px) { .watch-grid { grid-template-columns: 1fr; } }
+        
+        .header-left { display: flex; align-items: center; gap: 16px; cursor: pointer; }
+        .header-left svg { width: 32px; height: 32px; fill: var(--yt-red); }
+        .header-left h1 { font-size: 22px; }
+        .search-container { position: relative; display: flex; align-items: center; flex: 0 1 600px; }
+        #searchInput { width: 100%; border: 1px solid var(--border-color); border-radius: 40px 0 0 40px; height: 40px; padding: 0 16px; background-color: var(--input-bg); font-size: 16px; color: var(--primary-text-color); }
+        #searchButton { height: 40px; width: 64px; border-radius: 0 40px 40px 0; border: 1px solid var(--border-color); border-left: none; background-color: var(--surface-color); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        #searchButton:hover { background-color: var(--surface-hover-color); }
+        #searchSuggestions { position: absolute; top: 100%; left: 0; right: 64px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 12px 12px; z-index: 1000; max-height: 400px; overflow-y: auto; display: none; }
+        .suggestion-item { padding: 8px 16px; cursor: pointer; }
+        .suggestion-item:hover { background-color: var(--surface-color); }
+        .header-right { display: flex; align-items: center; gap: 8px; }
+
+        #home-page .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+        .video-card { cursor: pointer; }
+        .video-thumbnail { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 12px; background-color: var(--surface-color); margin-bottom: 12px; }
+        .video-card-meta { display: flex; gap: 12px; }
+        .video-card-channel-icon { width: 36px; height: 36px; border-radius: 50%; }
+        .video-card-title { font-weight: 500; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .video-card-channel, .video-card-stats { color: var(--secondary-text-color); font-size: 14px; }
+        
+        input, textarea { font-family: 'Roboto', sans-serif; font-size: inherit; color: var(--primary-text-color); background-color: transparent; border: 1px solid transparent; }
+        input:focus, textarea:focus { outline: none; border: 1px solid var(--link-color); background-color: var(--input-bg); }
+        .view-element { display: block; white-space: pre-wrap; word-wrap: break-word; }
+        .edit-element { display: none; }
+        .edit-mode .view-element { display: none; }
+        .edit-mode .edit-element { display: block; border: 1px dashed var(--secondary-text-color); border-radius: 4px; padding: 2px 4px; width: 100%; }
+        .edit-mode span.edit-element, .edit-mode input.edit-element { display: inline-block; width: auto; }
+        .edit-mode textarea.edit-element { min-height: 100px; resize: vertical; }
+        .video-player-wrapper { position: relative; width: 100%; padding-top: 56.25%; background-color: #000; border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
+        #youtubePlayer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+        #videoTitle .view-element { font-size: 20px; font-weight: 700; line-height: 1.2; }
+        #videoHashtags { color: var(--link-color); font-weight: 500; margin-top: 8px; }
+        .meta-container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 12px; }
+        .channel-info { display: flex; align-items: center; gap: 12px; }
+        .channel-icon-wrapper { position: relative; }
+        #channelIcon { width: 40px; height: 40px; border-radius: 50%; background-color: var(--surface-color); display: block; }
+        #uploadButton { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 6px; background-color: rgba(0,0,0,0.6); border-radius: 50%; cursor: pointer; }
+        #uploadButton svg { fill: #fff; margin: 0; }
+        .edit-mode #uploadButton { display: flex; }
+        .channel-details { font-size: 14px; }
+        #channelName .view-element { display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 700; }
+        .verified-badge { fill: var(--secondary-text-color); width: 14px; height: 14px; flex-shrink: 0; display: none; }
+        .is-verified .verified-badge { display: inline-block; }
+        #subscriberCount { color: var(--secondary-text-color); }
+        .action-buttons { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .action-button, .like-dislike-buttons { display: flex; align-items: center; background-color: var(--surface-color); border-radius: 18px; cursor: pointer; transition: background-color .2s; }
+        .action-button:hover, .like-dislike-buttons:hover { background-color: var(--surface-hover-color); }
+        .action-button { padding: 8px 16px; }
+        .action-button svg, .switch-container svg { width: 20px; height: 20px; fill: var(--icon-fill); margin-right: 8px; }
+        #saveButton { display: none; }
+        .like-dislike-buttons .btn { padding: 6px 12px; display: flex; align-items: center; gap: 6px; font-weight: 500; }
+        .like-dislike-buttons svg { width: 20px; height: 20px; fill: var(--icon-fill); }
+        .like-dislike-buttons .separator { width: 1px; background-color: var(--border-color); align-self: stretch; margin: 6px 0; }
+        #likeCount .edit-element { width: 80px; }
+        .description-box { background-color: var(--surface-color); border-radius: 12px; padding: 12px; margin-top: 16px; }
+        .metadata-line { display: flex; gap: 16px; font-weight: 700; flex-wrap: wrap; }
+        .metadata-line > div { display: flex; align-items: center; }
+        .metadata-line .icon { fill: var(--icon-fill); width: 16px; height: 16px; margin-right: 4px; vertical-align: middle; }
+        #videoDescription { margin-top: 12px; }
+        #videoDescription .view-element { line-height: 1.6; }
+        .switch-container { display: none; align-items: center; background-color: var(--surface-color); padding: 8px 16px; border-radius: 18px; }
+        .edit-mode .switch-container { display: flex; }
+        .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--secondary-text-color); transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--link-color); }
+        input:checked + .slider:before { transform: translateX(14px); }
+
+        #live-chat-container { margin-top: 16px; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; }
+        #live-chat-header { padding: 12px; font-weight: 500; border-bottom: 1px solid var(--border-color); }
+        #live-chat-messages { height: 400px; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+        .chat-message { display: flex; gap: 8px; }
+        .chat-message img { width: 24px; height: 24px; border-radius: 50%; }
+        .chat-message-author { font-weight: 500; color: var(--secondary-text-color); margin-right: 8px; font-size: 13px; }
+        .chat-message-text { font-size: 14px; }
+        
+        .comments-section { margin-top: 24px; }
+        .comments-header { display: flex; align-items: center; gap: 24px; margin-bottom: 24px; }
+        .comments-header h2 { font-size: 20px; font-weight: 700; }
+        #commentsContainer { display: flex; flex-direction: column; gap: 16px; }
+        .comment-thread { display: flex; gap: 12px; }
+        .comment-author-icon { width: 40px; height: 40px; border-radius: 50%; background-color: var(--surface-color); flex-shrink: 0; }
+        .comment-body { flex-grow: 1; }
+        .comment-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 13px; }
+        .comment-author-name { font-weight: 500; }
+        .comment-text { font-size: 14px; line-height: 1.5; }
+        .comment-actions { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+        .comment-like { display: flex; align-items: center; gap: 4px; }
+        .comment-like svg { width: 16px; height: 16px; fill: var(--icon-fill); }
+        .comment-like-count { font-size: 12px; color: var(--secondary-text-color); }
+        .comment-like-count .edit-element { width: 60px; }
+        .replies { margin-top: 12px; padding-left: 20px; border-left: 2px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 2000; display: none; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background-color: var(--bg-color); padding: 24px; border-radius: 12px; width: 90%; max-width: 500px; }
+        .modal-content h2 { margin-bottom: 16px; }
+        .modal-content .input-group { margin-bottom: 16px; }
+        .modal-content label { display: block; margin-bottom: 8px; font-weight: 500; }
+        .modal-content input[type="password"], .modal-content input[type="text"] { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background-color: var(--input-bg); font-size: 16px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+        .modal-actions button { padding: 8px 16px; border-radius: 18px; border: none; font-weight: 500; cursor: pointer; }
+        #saveApiKeyButton { background-color: var(--link-color); color: #fff; }
+        #closeModalButton { background-color: var(--surface-color); color: var(--primary-text-color); }
+        #openByIdButton { background-color: var(--surface-color); color: var(--primary-text-color); }
+        
+        #sidebar { display: flex; flex-direction: column; gap: 16px; }
+        .sidebar-video-card { display: flex; gap: 8px; cursor: pointer; }
+        .sidebar-video-card img { width: 168px; height: 94px; border-radius: 8px; flex-shrink: 0; }
+    </style>
+</head>
+<body>
+    <header id="app-header">
+        <div class="header-left" id="homeButton">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.051 1.999h.089c.822.003 4.987.033 6.11.335a2.01 2.01 0 0 1 1.415 1.42c.101.38.172.883.22 1.402l.01.104.022.26.008.104c.065.914.073 1.77.074 1.957v.075c-.001.194-.01 1.108-.082 2.06l-.008.105-.009.104c-.05.572-.124 1.14-.235 1.558a2.01 2.01 0 0 1-1.415 1.42c-1.16.312-5.569.334-6.18.335h-.142c-.309 0-1.587-.006-2.927-.052l-.17-.006-.087-.004-.171-.007-.171-.007c-1.11-.049-2.167-.128-2.654-.26a2.01 2.01 0 0 1-1.415-1.419c-.111-.417-.185-.986-.235-1.558L.09 9.82l-.008-.104A31 31 0 0 1 0 7.68v-.123c.002-.215.01-.958.064-1.778l.007-.103.003-.052.008-.104.022-.26.01-.104c.048-.519.119-1.023.22-1.402a2.01 2.01 0 0 1 1.415-1.42c.487-.13 1.544-.21 2.654-.26l.17-.007.172-.006.086-.003.171-.007A100 100 0 0 1 7.858 2zM6.4 5.209v4.818l4.157-2.408z"/></svg>
+            <h1>Info Editor</h1>
+        </div>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="動画を検索">
+            <div id="searchSuggestions"></div>
+            <button id="searchButton" aria-label="検索"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg></button>
+        </div>
+        <div class="header-right">
+            <button class="action-button" id="settingsButton"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/></svg></button>
+        </div>
+    </header>
+
+    <main id="app-main">
+        <div id="home-page" class="page">
+            <div class="container" id="home-container"></div>
+        </div>
+        <div id="watch-page" class="page">
+            <div class="container watch-grid">
+                <div id="primary">
+                    <div class="video-player-wrapper"><iframe id="youtubePlayer" src="" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>
+                    <div id="videoTitle"><span class="view-element"></span><input type="text" class="edit-element"></div>
+                    <div id="videoHashtags"><span class="view-element"></span><input type="text" class="edit-element"></div>
+                    <div class="meta-container">
+                        <div class="channel-info">
+                            <div class="channel-icon-wrapper">
+                                <img id="channelIcon" src="" alt="Channel Icon">
+                                <div id="uploadButton"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z"/></svg></div>
+                                <input type="file" id="imageUploadInput" accept="image/*" style="display: none;">
+                            </div>
+                            <div class="channel-details">
+                                <div id="channelName"><span class="view-element"></span><input type="text" class="edit-element"></div>
+                                <div id="subscriberCount"><span class="view-element"></span><input type="text" class="edit-element"></div>
+                            </div>
+                        </div>
+                        <div class="action-buttons">
+                            <div class="like-dislike-buttons">
+                                <div class="btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.864.046C7.908-.193 7.02.53 6.956 1.466c-.072 1.051-.23 2.016-.428 2.59-.125.36-.479 1.013-1.04 1.639-.557.623-1.282 1.178-2.131 1.41C2.685 7.288 2 7.87 2 8.72v4.001c0 .845.682 1.464 1.448 1.545 1.07.114 1.564.415 2.068.723l.048.03c.272.165.578.348.97.484.397.136.861.217 1.466.217h3.5c.937 0 1.599-.477 1.934-1.064a1.86 1.86 0 0 0 .254-.912c0-.152-.023-.312-.077-.464.201-.263.38-.578.488-.901.11-.33.172-.762.004-1.149.069-.13.12-.269.159-.403.077-.27.113-.568.113-.857 0-.288-.036-.585-.113-.856a2 2 0 0 0-.138-.362 1.9 1.9 0 0 0 .234-1.734c-.206-.592-.682-1.1-1.2-1.272-.847-.282-1.803-.276-2.516-.211a10 10 0 0 0-.443.05 9.4 9.4 0 0 0-.062-4.509A1.38 1.38 0 0 0 9.125.111zM11.5 14.721H8c-.51 0-.863-.069-1.14-.164-.281-.097-.506-.228-.776-.393l-.04-.024c-.555-.339-1.198-.731-2.49-.868-.333-.036-.554-.29-.554-.55V8.72c0-.254.226-.543.62-.65 1.095-.3 1.977-.996 2.614-1.708.635-.71 1.064-1.475 1.238-1.978.243-.7.407-1.768.482-2.85.025-.362.36-.594.667-.518l.262.066c.16.04.258.143.288.255a8.34 8.34 0 0 1-.145 4.725.5.5 0 0 0 .595.644l.003-.001.014-.003.058-.014a9 9 0 0 1 1.036-.157c.663-.06 1.457-.054 2.11.164.175.058.45.3.57.65.107.308.087.67-.266 1.022l-.353.353.353.354c.043.043.105.141.154.315.048.167.075.37.075.581 0 .212-.027.414-.075.582-.05.174-.111.272-.154.315l-.353.353.353.354c.047.047.109.177.005.488a2.2 2.2 0 0 1-.505.805l-.353.353.353.354c.006.005.041.05.041.17a.9.9 0 0 1-.121.416c-.165.288-.503.56-1.066.56z"/></svg><div id="likeCount"><span class="view-element"></span><input type="text" class="edit-element"></div></div>
+                                <div class="separator"></div>
+                                <div class="btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-hand-thumbs-down" viewBox="0 0 16 16"><path d="M8.864 15.674c-.956.24-1.843-.484-1.908-1.42-.072-1.05-.23-2.015-.428-2.59-.125-.36-.479-1.012-1.04-1.638-.557-.624-1.282-1.179-2.131-1.41C2.685 8.432 2 7.85 2 7V3c0-.845.682-1.464 1.448-1.546 1.07-.113 1.564-.415 2.068-.723l.048-.029c.272-.166.578-.349.97-.484C6.931.08 7.395 0 8 0h3.5c.937 0 1.599.478 1.934 1.064.164.287.254.607.254.913 0 .152-.023.312-.077-.464.201.262.38.577.488.9.11.33.172.762.004 1.15.069.13.12.268.159.403.077.27.113.567.113.856s-.036.586-.113.856c-.035.12-.08.244-.138.363.394.571.418 1.2.234 1.733-.206.592-.682-1.1-1.2 1.272-.847.283-1.803.276-2.516.211a10 10 0 0 1-.443-.05 9.36 9.36 0 0 1-.062 4.51c-.138.508-.55.848-1.012.964zM11.5 1H8c-.51 0-.863.068-1.14.163-.281.097-.506.229-.776.393l-.04.025c-.555.338-1.198.73-2.49.868-.333.035-.554.29-.554.55V7c0 .255.226.543.62.65 1.095.3 1.977.997 2.614 1.709.635.71 1.064-1.475 1.238 1.977.243.7.407 1.768.482 2.85.025.362.36.595.667.518l.262-.065c.16-.04.258-.144.288-.255a8.34 8.34 0 0 0-.145-4.726.5.5 0 0 1 .595-.643h.003l.014.004.058.013a9 9 0 0 0 1.036.157c.663.06 1.457.054 2.11-.163.175-.059.45-.301.57-.651.107-.308.087-.67-.266-1.021L12.793 7l.353-.354c.043-.042.105-.14.154-.315.048-.167.075-.37.075-.581s-.027-.414-.075-.581c-.05-.174-.111-.273-.154-.315l-.353-.354.353-.354c.047-.047.109-.176.005-.488a2.2 2.2 0 0 0-.505-.804l-.353-.354.353-.354c.006-.005.041-.05.041-.17a.9.9 0 0 0-.121-.415C12.4 1.272 12.063 1 11.5 1"/></svg></div>
+                            </div>
+                            <div class="switch-container">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-patch-check" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10.354 6.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7 8.793l2.646-2.647a.5.5 0 0 1 .708 0"/><path d="m10.273 2.513-.921-.944.715-.698.622.637.89-.011a2.89 2.89 0 0 1 2.924 2.924l-.01.89.636.622a2.89 2.89 0 0 1 0 4.134l-.637.622.011.89a2.89 2.89 0 0 1-2.924 2.924l-.89-.01-.622.636a2.89 2.89 0 0 1-4.134 0l-.622-.637-.89.011a2.89 2.89 0 0 1-2.924-2.924l.01-.89-.636-.622a2.89 2.89 0 0 1 0-4.134l.637-.622-.011-.89a2.89 2.89 0 0 1 2.924-2.924l.89.01.622-.636a2.89 2.89 0 0 1 4.134 0l-.715.698a1.89 1.89 0 0 0-2.704 0l-.92.944-1.32-.016a1.89 1.89 0 0 0-1.911 1.912l.016 1.318-.944.921a1.89 1.89 0 0 0 0 2.704l.944.92-.016 1.32a1.89 1.89 0 0 0 1.912 1.911l1.318-.016.921.944a1.89 1.89 0 0 0 2.704 0l.92-.944 1.32.016a1.89 1.89 0 0 0 1.911-1.912l-.016-1.318.944-.921a1.89 1.89 0 0 0 0-2.704l-.944-.92.016-1.32a1.89 1.89 0 0 0-1.912-1.911z"/></svg>
+                                <label class="switch"><input type="checkbox" id="verifiedSwitch"><span class="slider"></span></label>
+                            </div>
+                            <div class="action-button" id="editModeToggle"></div>
+                            <div class="action-button" id="saveButton"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 2H9v3h2z"/><path d="M1.5 0h11.586a1.5 1.5 0 0 1 1.06.44l1.415 1.414A1.5 1.5 0 0 1 16 2.914V14.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13A1.5 1.5 0 0 1 1.5 0M1 1.5v13a.5.5 0 0 0 .5.5H2v-4.5A1.5 1.5 0 0 1 3.5 9h9a1.5 1.5 0 0 1 1.5 1.5V15h.5a.5.5 0 0 0 .5-.5V2.914a.5.5 0 0 0-.146-.353l-1.415-1.415A.5.5 0 0 0 13.086 1H13v4.5A1.5 1.5 0 0 1 11.5 7h-7A1.5 1.5 0 0 1 3 5.5V1H1.5a.5.5 0 0 0-.5.5m3 4a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V1H4zM3 15h10v-4.5a.5.5 0 0 0-.5-.5h-9a.5.5 0 0 0-.5.5z"/></svg><span>保存</span></div>
+                            <div class="action-button" id="resetButton"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg><span>リセット</span></div>
+                        </div>
+                    </div>
+                    <div class="description-box">
+                        <div class="metadata-line">
+                            <div id="viewCount"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye icon" viewBox="0 0 16 16"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/></svg><span class="view-element"></span><input type="text" class="edit-element"></div>
+                            <div id="live-viewers" style="display:none;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people" viewBox="0 0 16 16"><path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1zm-7.978-1L7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002-.014.002zM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4m3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0M6.936 9.28a6 6 0 0 0-1.23-.247A7 7 0 0 0 5 9c-4 0-5 3-5 4q0 1 1 1h4.216A2.24 2.24 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816M4.92 10A5.5 5.5 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0m3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4"/></svg><span class="view-element"></span><input type="text" class="edit-element"></div>
+                            <div id="uploadDate"><span class="view-element"></span><input type="text" class="edit-element"></div>
+                        </div>
+                        <div id="videoDescription"><span class="view-element"></span><textarea class="edit-element"></textarea></div>
+                    </div>
+                    <div id="live-chat-container" style="display:none;">
+                        <div id="live-chat-header">チャット</div>
+                        <div id="live-chat-messages"></div>
+                    </div>
+                    <div class="comments-section">
+                        <div class="comments-header"><div id="commentCount"><h2><span class="view-element"></span><input type="text" class="edit-element"></h2></div></div>
+                        <div id="commentsContainer"></div>
+                    </div>
+                </div>
+                <div id="sidebar"></div>
+            </div>
+        </div>
+        <div id="shorts-page" class="page">
+            <div class="shorts-container" id="shorts-container"></div>
+        </div>
+    </main>
+
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal-content" id="modalContent">
+            <h2>設定</h2>
+            <div class="input-group">
+                <label for="apiKeyInputModal">YouTube Data API v3 Key</label>
+                <input type="password" id="apiKeyInputModal">
+            </div>
+             <div class="input-group">
+                <label for="videoIdInputModal">動画IDで開く</label>
+                <input type="text" id="videoIdInputModal" placeholder="動画IDを入力...">
+            </div>
+            <div class="modal-actions">
+                <button id="openByIdButton">この動画を開く</button>
+                <button id="saveApiKeyButton">APIキーを保存</button>
+                <button id="closeModalButton">閉じる</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const ICONS = {
+            edit: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pen" viewBox="0 0 16 16"><path d="m13.498.795.149-.149a1.207 1.207 0 1 1 1.707 1.708l-.149.148a1.5 1.5 0 0 1-.059 2.059L4.854 14.854a.5.5 0 0 1-.233.131l-4 1a.5.5 0 0 1-.606-.606l1-4a.5.5 0 0 1 .131-.232l9.642-9.642a.5.5 0 0 0-.642.056L6.854 4.854a.5.5 0 1 1-.708-.708L9.44.854A1.5 1.5 0 0 1 11.5.796a1.5 1.5 0 0 1 1.998-.001m-.644.766a.5.5 0 0 0-.707 0L1.95 11.756l-.764 3.057 3.057-.764L14.44 3.854a.5.5 0 0 0 0-.708z"/></svg> <span>編集モード</span>`,
+            view: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye" viewBox="0 0 16 16"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/></svg> <span>視聴モード</span>`,
+        };
+        const state = {
+            currentPage: 'home',
+            currentVideoId: null,
+            currentLiveChat: { id: null, interval: null, nextPageToken: null },
+            originalData: {},
+            isEditMode: false,
+        };
+        const getEl = id => document.getElementById(id);
+        const app = {
+            main: getEl('app-main'),
+            pages: { home: getEl('home-page'), watch: getEl('watch-page'), shorts: getEl('shorts-page'), },
+            home: { container: getEl('home-container'), },
+            watch: {
+                player: getEl('youtubePlayer'), title: getEl('videoTitle'), hashtags: getEl('videoHashtags'),
+                channelIcon: getEl('channelIcon'), uploadButton: getEl('uploadButton'), imageUploadInput: getEl('imageUploadInput'),
+                channelName: getEl('channelName'), verifiedSwitch: getEl('verifiedSwitch'), subscriberCount: getEl('subscriberCount'),
+                likeCount: getEl('likeCount'), viewCount: getEl('viewCount'), liveViewers: getEl('live-viewers'),
+                uploadDate: getEl('uploadDate'), description: getEl('videoDescription'), commentCount: getEl('commentCount'),
+                commentsContainer: getEl('commentsContainer'), sidebar: getEl('sidebar'),
+                liveChat: { container: getEl('live-chat-container'), messages: getEl('live-chat-messages'), },
+                editModeToggle: getEl('editModeToggle'), saveButton: getEl('saveButton'), resetButton: getEl('resetButton'),
+            },
+            search: { input: getEl('searchInput'), button: getEl('searchButton'), suggestions: getEl('searchSuggestions'), },
+            settings: { modal: getEl('settingsModal'), modalContent: getEl('modalContent'), apiKeyInput: getEl('apiKeyInputModal'), saveButton: getEl('saveApiKeyButton'), closeButton: getEl('closeModalButton'), settingsButton: getEl('settingsButton'), videoIdInput: getEl('videoIdInputModal'), openByIdButton: getEl('openByIdButton') }
+        };
+        const API_BASE_URL = 'https://www.googleapis.com/youtube/v3';
+
+        document.addEventListener('DOMContentLoaded', init);
+
+        function init() {
+            getEl('homeButton').addEventListener('click', () => navigateTo('home'));
+            app.search.input.addEventListener('input', debounce(handleSearchInput, 300));
+            app.search.input.addEventListener('keydown', e => { if (e.key === 'Enter') handleSearchSubmit(); });
+            app.search.button.addEventListener('click', handleSearchSubmit);
+            document.body.addEventListener('click', () => { app.search.suggestions.style.display = 'none'; });
+            app.search.input.addEventListener('click', e => e.stopPropagation());
+            app.watch.editModeToggle.addEventListener('click', toggleEditMode);
+            app.watch.saveButton.addEventListener('click', saveChanges);
+            app.watch.resetButton.addEventListener('click', resetChanges);
+            app.watch.uploadButton.addEventListener('click', () => app.watch.imageUploadInput.click());
+            app.watch.imageUploadInput.addEventListener('change', handleImageUpload);
+            app.watch.verifiedSwitch.addEventListener('change', handleVerifiedToggle);
+            app.settings.settingsButton.addEventListener('click', openSettingsModal);
+            app.settings.saveButton.addEventListener('click', saveApiKey);
+            app.settings.closeButton.addEventListener('click', closeSettingsModal);
+            app.settings.modal.addEventListener('click', closeSettingsModal);
+            app.settings.modalContent.addEventListener('click', (e) => e.stopPropagation());
+            app.settings.openByIdButton.addEventListener('click', openVideoById);
+            navigateTo('home');
+        }
+        
+        function openSettingsModal() {
+            app.settings.apiKeyInput.value = localStorage.getItem('youtube_api_key') || '';
+            app.settings.modal.classList.add('active');
+        }
+        function closeSettingsModal() {
+            app.settings.modal.classList.remove('active');
+        }
+        function saveApiKey() {
+            const newKey = app.settings.apiKeyInput.value.trim();
+            if(newKey) {
+                localStorage.setItem('youtube_api_key', newKey);
+                alert('APIキーを保存しました。');
+                closeSettingsModal();
+                if(state.currentPage === 'home') loadHomePage();
+            } else {
+                alert('APIキーを入力してください。');
+            }
+        }
+        function openVideoById(){
+            const videoId = app.settings.videoIdInput.value.trim();
+            if(videoId){
+                closeSettingsModal();
+                navigateTo('watch', { videoId: videoId });
+            } else {
+                alert('動画IDを入力してください。');
+            }
+        }
+
+        function navigateTo(page, params = {}) {
+            for (const pageKey in app.pages) { app.pages[pageKey].style.display = 'none'; }
+            if (state.currentLiveChat.interval) { clearInterval(state.currentLiveChat.interval); state.currentLiveChat.interval = null; }
+            state.currentPage = page;
+            app.pages[page].style.display = 'block';
+            app.main.scrollTop = 0;
+            switch (page) {
+                case 'home': loadHomePage(params.query); break;
+                case 'watch': loadWatchPage(params.videoId); break;
+            }
+        }
+
+        async function loadHomePage(query = null) {
+            app.home.container.innerHTML = '<h2>Loading...</h2>';
+            try {
+                const apiKey = localStorage.getItem('youtube_api_key');
+                if (!apiKey) throw new Error('APIキーが設定されていません。右上の設定ボタンからキーを入力してください。');
+                const params = query ? { part: 'snippet', q: query, type: 'video', maxResults: 20 } : { part: 'snippet,contentDetails,statistics', chart: 'mostPopular', regionCode: 'JP', maxResults: 20 };
+                const endpoint = query ? 'search' : 'videos';
+                const data = await apiRequest(endpoint, params);
+                let videos = query ? await processSearchResults(data.items) : data.items;
+                app.home.container.innerHTML = `<h2>${query ? `"${query}" の検索結果` : 'おすすめの動画'}</h2>`;
+                const videoGrid = document.createElement('div');
+                videoGrid.className = 'video-grid';
+                videos.forEach(video => { videoGrid.appendChild(createVideoCard(video)); });
+                app.home.container.appendChild(videoGrid);
+            } catch (e) {
+                app.home.container.innerHTML = `<h2>エラー: ${e.message}</h2>`;
+            }
+        }
+
+        async function loadWatchPage(videoId) {
+            if (!videoId) return navigateTo('home');
+            try {
+                const videoDetails = await apiRequest('videos', { part: 'snippet,statistics,liveStreamingDetails,contentDetails', id: videoId });
+                if (!videoDetails.items.length) throw new Error('動画が見つかりません。');
+                const video = videoDetails.items[0];
+                const channelId = video.snippet.channelId;
+                const [channelDetails, commentsData, relatedVideos] = await Promise.all([
+                    apiRequest('channels', { part: 'snippet,statistics', id: channelId }),
+                    apiRequest('commentThreads', { part: 'snippet,replies', videoId: videoId, order: 'relevance' }).catch(() => ({ items: [] })),
+                    apiRequest('search', { part: 'snippet', relatedToVideoId: videoId, type: 'video', maxResults: 20 }).catch(() => ({ items: [] }))
+                ]);
+                const channel = channelDetails.items[0];
+                state.originalData = parseApiData(video, channel, commentsData);
+                state.currentVideoId = videoId;
+                const savedData = localStorage.getItem(`yt-editor-${videoId}`);
+                displayData(savedData ? JSON.parse(savedData) : state.originalData);
+                renderSidebar(await processSearchResults(relatedVideos.items));
+                app.watch.liveChat.container.style.display = 'none';
+                app.watch.liveViewers.style.display = 'none';
+                if (video.snippet.liveBroadcastContent === 'live') {
+                    app.watch.liveViewers.style.display = 'flex';
+                    if (video.liveStreamingDetails && video.liveStreamingDetails.activeLiveChatId) {
+                        app.watch.liveChat.container.style.display = 'block';
+                        startLiveChat(video.liveStreamingDetails.activeLiveChatId);
+                    }
+                }
+            } catch (e) { alert(`動画の読み込みエラー: ${e.message}`); navigateTo('home'); }
+        }
+
+        async function apiRequest(endpoint, params) {
+            const apiKey = localStorage.getItem('youtube_api_key');
+            if (!apiKey) throw new Error('APIキーが見つかりません。');
+            const url = new URL(`${API_BASE_URL}/${endpoint}`);
+            url.searchParams.append('key', apiKey);
+            for (const key in params) { url.searchParams.append(key, params[key]); }
+            const response = await fetch(url);
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message);
+            return data;
+        }
+
+        async function processSearchResults(items) {
+            const videoIds = items.map(item => item.id.videoId).filter(Boolean);
+            if (!videoIds.length) return [];
+            const videoDetails = await apiRequest('videos', { part: 'snippet,statistics', id: videoIds.join(',') });
+            return items.map(item => videoDetails.items.find(detail => detail.id === item.id.videoId) || item);
+        }
+
+        function parseApiData(video, channel, commentsData) {
+            const s = video.snippet, stats = video.statistics || {}, live = video.liveStreamingDetails || {};
+            const isVerified = (channel.statistics.subscriberCount > 100000);
+            const data = {
+                video: {
+                    title: { view: s.title, edit: s.title },
+                    description: { view: s.description, edit: s.description },
+                    uploadDate: { view: formatDate(s.publishedAt), edit: formatDate(s.publishedAt) },
+                    hashtags: { view: (s.tags || []).filter(t => !t.includes(' ')).map(t => `#${t}`).join(' '), edit: (s.tags || []).map(t => `#${t}`).join(' ') },
+                    viewCount: { view: `${formatNumberWithUnit(stats.viewCount)} 回視聴`, edit: `${formatNumberWithUnit(stats.viewCount)} 回視聴` },
+                    liveViewers: { view: `${formatNumber(live.concurrentViewers)}人が視聴中`, edit: `${formatNumber(live.concurrentViewers)}人が視聴中` },
+                    likeCount: { view: formatNumber(stats.likeCount), edit: formatNumber(stats.likeCount) },
+                    commentCount: { view: `コメント ${formatNumber(stats.commentCount)}件`, edit: `コメント ${formatNumber(stats.commentCount)}件` },
+                    subscriberCount: { view: formatSubscriberCount(channel.statistics.subscriberCount), edit: formatSubscriberCount(channel.statistics.subscriberCount) }
+                },
+                channel: { name: { view: s.channelTitle, edit: s.channelTitle }, iconUrl: channel.snippet.thumbnails.default.url, isVerified: isVerified },
+                comments: []
+            };
+            if (commentsData && commentsData.items) {
+                data.comments = commentsData.items.map(item => {
+                    const c = item.snippet.topLevelComment.snippet, comment = {
+                        id: item.snippet.topLevelComment.id, authorName: c.authorDisplayName, authorIconUrl: c.authorProfileImageUrl,
+                        text: { view: c.textDisplay, edit: c.textOriginal }, likeCount: { view: formatNumber(c.likeCount), edit: c.likeCount || 0 }, replies: []
+                    };
+                    if (item.replies) { comment.replies = item.replies.comments.map(r => ({ id: r.id, authorName: r.snippet.authorDisplayName, authorIconUrl: r.snippet.authorProfileImageUrl, text: { view: r.snippet.textDisplay, edit: r.snippet.textOriginal }, likeCount: { view: formatNumber(r.snippet.likeCount), edit: r.snippet.likeCount || 0 } })); }
+                    return comment;
+                });
+            } return data;
+        }
+
+        function displayData(data) {
+            app.watch.player.src = `https://www.youtube.com/embed/${state.currentVideoId}`;
+            const setData = (el, viewVal, editVal) => {
+                if (!el) return;
+                const viewEl = el.querySelector('.view-element');
+                if (viewEl) viewEl.innerHTML = (viewVal || '').replace(/\n/g, '<br>');
+                const editEl = el.querySelector('.edit-element'); if (editEl) editEl.value = editVal;
+            };
+            const { video, channel, comments } = data;
+            setData(app.watch.title, video.title.view, video.title.edit);
+            setData(app.watch.hashtags, video.hashtags.view, video.hashtags.edit);
+            app.watch.channelIcon.src = channel.iconUrl;
+            
+            // Channel Name is special because of the badge
+            const channelNameView = app.watch.channelName.querySelector('.view-element');
+            channelNameView.textContent = channel.name.view;
+            const channelNameEdit = app.watch.channelName.querySelector('.edit-element');
+            channelNameEdit.value = channel.name.edit;
+
+            updateVerifiedBadge(channel.isVerified);
+            setData(app.watch.subscriberCount, video.subscriberCount.view, video.subscriberCount.edit);
+            setData(app.watch.likeCount, video.likeCount.view, video.likeCount.edit);
+            setData(app.watch.viewCount, video.viewCount.view, video.viewCount.edit);
+            setData(app.watch.liveViewers, video.liveViewers.view, video.liveViewers.edit);
+            setData(app.watch.uploadDate, video.uploadDate.view, video.uploadDate.edit);
+            setData(app.watch.description, video.description.view, video.description.edit);
+            setData(app.watch.commentCount, video.commentCount.view, video.commentCount.edit);
+            app.watch.commentsContainer.innerHTML = '';
+            comments.forEach(commentData => {
+                const commentEl = createCommentElement(commentData);
+                if (commentData.replies && commentData.replies.length > 0) {
+                    const repliesContainer = document.createElement('div'); repliesContainer.className = 'replies';
+                    commentData.replies.forEach(replyData => { repliesContainer.appendChild(createCommentElement(replyData)); });
+                    commentEl.querySelector('.comment-body').appendChild(repliesContainer);
+                }
+                app.watch.commentsContainer.appendChild(commentEl);
+            });
+            if (state.isEditMode) {
+                app.pages.watch.classList.add('edit-mode');
+                app.watch.editModeToggle.innerHTML = ICONS.view;
+                app.watch.saveButton.style.display = 'flex';
+            } else {
+                app.pages.watch.classList.remove('edit-mode');
+                app.watch.editModeToggle.innerHTML = ICONS.edit;
+                app.watch.saveButton.style.display = 'none';
+            }
+        }
+        
+        function createVideoCard(video) {
+            const card = document.createElement('div'); card.className = 'video-card';
+            card.addEventListener('click', () => navigateTo('watch', { videoId: video.id.videoId || video.id }));
+            const snippet = video.snippet, stats = video.statistics;
+            card.innerHTML = `<img class="video-thumbnail" src="${snippet.thumbnails.high.url}" alt="${snippet.title}"><div class="video-card-meta"><div><h3 class="video-card-title">${snippet.title}</h3><div class="video-card-channel">${snippet.channelTitle}</div><div class="video-card-stats">${stats ? `${formatNumberWithUnit(stats.viewCount)} 回視聴` : ''} • ${formatDate(snippet.publishedAt)}</div></div></div>`;
+            return card;
+        }
+
+        function renderSidebar(videos) {
+            app.watch.sidebar.innerHTML = '';
+            if (!videos || !videos.length) return;
+            videos.forEach(video => {
+                if (!video || !video.snippet) return;
+                const card = document.createElement('div'); card.className = 'sidebar-video-card';
+                card.addEventListener('click', () => navigateTo('watch', { videoId: video.id.videoId || video.id }));
+                card.innerHTML = `<img src="${video.snippet.thumbnails.medium.url}" alt=""><div><h4 class="video-card-title">${video.snippet.title}</h4><div class="video-card-channel">${video.snippet.channelTitle}</div></div>`;
+                app.watch.sidebar.appendChild(card);
+            });
+        }
+
+        function toggleEditMode() {
+            state.isEditMode = !state.isEditMode;
+            app.pages.watch.classList.toggle('edit-mode', state.isEditMode);
+            app.watch.editModeToggle.innerHTML = state.isEditMode ? ICONS.view : ICONS.edit;
+            app.watch.saveButton.style.display = state.isEditMode ? 'flex' : 'none';
+        }
+        
+        function saveChanges() {
+            if (!state.isEditMode) return;
+            const getEditVal = id => getEl(id).querySelector('.edit-element').value;
+            const savedData = JSON.parse(JSON.stringify(state.originalData));
+            const updateField = (field, id) => { const value = getEditVal(id); field.view = value; field.edit = value; };
+            updateField(savedData.video.title, 'videoTitle'); updateField(savedData.video.hashtags, 'videoHashtags');
+            updateField(savedData.channel.name, 'channelName'); updateField(savedData.video.subscriberCount, 'subscriberCount');
+            updateField(savedData.video.likeCount, 'likeCount'); updateField(savedData.video.viewCount, 'viewCount');
+            updateField(savedData.video.uploadDate, 'uploadDate'); updateField(savedData.video.description, 'videoDescription');
+            updateField(savedData.video.commentCount, 'commentCount');
+            savedData.channel.iconUrl = app.watch.channelIcon.src;
+            savedData.channel.isVerified = app.watch.verifiedSwitch.checked;
+            const updateCommentData = (comment) => {
+                const el = getEl(comment.id); if (!el) return;
+                const textVal = el.querySelector('.comment-text .edit-element').value, likeVal = el.querySelector('.comment-like-count .edit-element').value;
+                comment.text.view = textVal; comment.text.edit = textVal;
+                comment.likeCount.view = likeVal; comment.likeCount.edit = likeVal;
+            };
+            savedData.comments.forEach(comment => {
+                updateCommentData(comment);
+                if (comment.replies) { comment.replies.forEach(reply => updateCommentData(reply)); }
+            });
+            localStorage.setItem(`yt-editor-${state.currentVideoId}`, JSON.stringify(savedData));
+            alert('変更を保存しました！'); toggleEditMode(); displayData(savedData);
+        }
+
+        function resetChanges() { if (confirm('すべての変更をリセットしますか？')) { localStorage.removeItem(`yt-editor-${state.currentVideoId}`); displayData(state.originalData); alert('リセットしました。'); } }
+        
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => { app.watch.channelIcon.src = e.target.result; };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleVerifiedToggle() { updateVerifiedBadge(this.checked); }
+
+        function updateVerifiedBadge(isVerified) {
+            const nameContainer = app.watch.channelName.querySelector('.view-element');
+            nameContainer.classList.toggle('is-verified', isVerified);
+            let badge = nameContainer.querySelector('.verified-badge');
+            if (isVerified && !badge) {
+                badge = document.createElement('span'); badge.className = 'verified-badge';
+                badge.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-patch-check" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10.354 6.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7 8.793l2.646-2.647a.5.5 0 0 1 .708 0"/><path d="m10.273 2.513-.921-.944.715-.698.622.637.89-.011a2.89 2.89 0 0 1 2.924 2.924l-.01.89.636.622a2.89 2.89 0 0 1 0 4.134l-.637.622.011.89a2.89 2.89 0 0 1-2.924 2.924l-.89-.01-.622.636a2.89 2.89 0 0 1-4.134 0l-.622-.637-.89.011a2.89 2.89 0 0 1-2.924-2.924l.01-.89-.636-.622a2.89 2.89 0 0 1 0-4.134l.637-.622-.011-.89a2.89 2.89 0 0 1 2.924-2.924l.89.01.622-.636a2.89 2.89 0 0 1 4.134 0l-.715.698a1.89 1.89 0 0 0-2.704 0l-.92.944-1.32-.016a1.89 1.89 0 0 0-1.911 1.912l.016 1.318-.944.921a1.89 1.89 0 0 0 0 2.704l.944.92-.016 1.32a1.89 1.89 0 0 0 1.912 1.911l1.318-.016.921.944a1.89 1.89 0 0 0 2.704 0l.92-.944 1.32.016a1.89 1.89 0 0 0 1.911-1.912l-.016-1.318.944-.921a1.89 1.89 0 0 0 0-2.704l-.944-.92.016-1.32a1.89 1.89 0 0 0-1.912-1.911z"/></svg>`;
+                nameContainer.appendChild(badge);
+            }
+            app.watch.verifiedSwitch.checked = isVerified;
+        }
+
+        async function handleSearchInput() {
+            const query = app.search.input.value.trim();
+            if (query.length < 2) return app.search.suggestions.style.display = 'none';
+            try {
+                const data = await apiRequest('search', { part: 'snippet', q: query, type: 'video', maxResults: 5 });
+                app.search.suggestions.innerHTML = '';
+                data.items.forEach(item => {
+                    const div = document.createElement('div'); div.className = 'suggestion-item';
+                    div.textContent = item.snippet.title;
+                    div.addEventListener('click', (e) => { e.stopPropagation(); app.search.input.value = item.snippet.title; app.search.suggestions.style.display = 'none'; handleSearchSubmit(); });
+                    app.search.suggestions.appendChild(div);
+                });
+                app.search.suggestions.style.display = 'block';
+            } catch(e) { console.error("Suggestion error:", e); }
+        }
+
+        function handleSearchSubmit() {
+            const query = app.search.input.value.trim();
+            if (!query) return;
+            app.search.suggestions.style.display = 'none';
+            navigateTo('home', { query });
+        }
+
+        function startLiveChat(liveChatId) {
+            state.currentLiveChat.id = liveChatId; state.currentLiveChat.nextPageToken = null; app.watch.liveChat.messages.innerHTML = '';
+            const fetchChat = async () => {
+                try {
+                    const params = { liveChatId: state.currentLiveChat.id, part: 'snippet,authorDetails' };
+                    if (state.currentLiveChat.nextPageToken) params.pageToken = state.currentLiveChat.nextPageToken;
+                    const chatData = await apiRequest('liveChat/messages', params);
+                    chatData.items.forEach(item => {
+                        const messageEl = document.createElement('div'); messageEl.className = 'chat-message';
+                        messageEl.innerHTML = `<img src="${item.authorDetails.profileImageUrl}" alt=""><div><span class="chat-message-author">${item.authorDetails.displayName}</span><span class="chat-message-text">${item.snippet.displayMessage}</span></div>`;
+                        app.watch.liveChat.messages.appendChild(messageEl);
+                    });
+                    app.watch.liveChat.messages.scrollTop = app.watch.liveChat.messages.scrollHeight;
+                    state.currentLiveChat.nextPageToken = chatData.nextPageToken;
+                } catch (e) { console.error('Live chat fetch error:', e); if(state.currentLiveChat.interval) clearInterval(state.currentLiveChat.interval); }
+            };
+            fetchChat();
+            state.currentLiveChat.interval = setInterval(fetchChat, 5000);
+        }
+
+        function debounce(fn, delay) { let timeoutId; return function(...args) { if (timeoutId) clearTimeout(timeoutId); timeoutId = setTimeout(() => fn.apply(this, args), delay); }; }
+        function formatNumber(numStr) { return Number(numStr || 0).toLocaleString('ja-JP'); }
+        function formatNumberWithUnit(numStr) {
+            const num = Number(numStr);
+            if (isNaN(num) || num === null || num === 0) return '0';
+            if (num < 10000) return num.toLocaleString('ja-JP');
+            if (num >= 100000000) { const val = num / 100000000; if (val < 10) return `${parseFloat(val.toFixed(2))}億`; if (val < 100) return `${parseFloat(val.toFixed(1))}億`; return `${Math.round(val)}億`; }
+            if (num >= 10000) { const val = num / 10000; if (val < 10) return `${parseFloat(val.toFixed(2))}万`; if (val < 100) return `${parseFloat(val.toFixed(1))}万`; return `${Math.round(val)}万`; }
+        }
+        function formatSubscriberCount(numStr) { return `チャンネル登録者数 ${formatNumberWithUnit(numStr)}人`; }
+        function formatDate(isoString) { if (!isoString) return '----/--/--'; try { return new Date(isoString).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }); } catch (e) { return isoString; } }
+
+        function createCommentElement(data) {
+            const div = document.createElement('div'); div.className = 'comment-thread'; div.id = data.id;
+            div.innerHTML = `<img class="comment-author-icon" src="${data.authorIconUrl}" alt="author icon"><div class="comment-body"><div class="comment-meta"><span class="comment-author-name">${data.authorName}</span></div><div class="comment-text"><p class="view-element">${data.text.view.replace(/\n/g, '<br>')}</p><textarea class="edit-element">${data.text.edit}</textarea></div><div class="comment-actions"><div class="comment-like"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-hand-thumbs-up" viewBox="0 0 16 16"><path d="M8.864.046C7.908-.193 7.02.53 6.956 1.466c-.072 1.051-.23 2.016-.428 2.59-.125.36-.479 1.013-1.04 1.639-.557.623-1.282 1.178-2.131 1.41C2.685 7.288 2 7.87 2 8.72v4.001c0 .845.682 1.464 1.448 1.545 1.07.114 1.564.415 2.068.723l.048.03c.272.165.578.348.97.484.397.136.861.217 1.466.217h3.5c.937 0 1.599-.477 1.934-1.064a1.86 1.86 0 0 0 .254-.912c0-.152-.023-.312-.077-.464.201-.263.38-.578.488-.901.11-.33.172-.762.004-1.149.069-.13.12-.269.159-.403.077-.27.113-.568.113-.857 0-.288-.036-.585-.113-.856a2 2 0 0 0-.138-.362 1.9 1.9 0 0 0 .234-1.734c-.206-.592-.682-1.1-1.2-1.272-.847-.282-1.803-.276-2.516-.211a10 10 0 0 0-.443.05 9.4 9.4 0 0 0-.062-4.509A1.38 1.38 0 0 0 9.125.111zM11.5 14.721H8c-.51 0-.863-.069-1.14-.164-.281-.097-.506-.228-.776-.393l-.04-.024c-.555-.339-1.198-.731-2.49-.868-.333-.036-.554-.29-.554-.55V8.72c0-.254.226-.543.62-.65 1.095-.3 1.977-.996 2.614-1.708.635-.71 1.064-1.475 1.238-1.978.243-.7.407-1.768.482-2.85.025-.362.36-.594.667-.518l.262.066c.16.04.258.143.288.255a8.34 8.34 0 0 1-.145 4.725.5.5 0 0 0 .595.644l.003-.001.014-.003.058-.014a9 9 0 0 1 1.036-.157c.663-.06 1.457-.054 2.11.164.175.058.45.3.57.65.107.308.087.67-.266 1.022l-.353.353.353.354c.043.043.105.141.154.315.048.167.075.37.075.581 0 .212-.027.414-.075.582-.05.174-.111.272-.154.315l-.353.353.353.354c.047.047.109.177.005.488a2.2 2.2 0 0 1-.505.805l-.353.353.353.354c.006.005.041.05.041.17a.9.9 0 0 1-.121.416c-.165.288-.503.56-1.066.56z"/></svg><div class="comment-like-count"><span class="view-element">${data.likeCount.view}</span><input type="text" class="edit-element" value="${data.likeCount.edit}"></div></div></div></div>`;
+            return div;
+        }
+    </script>
+</body>
+</html>
