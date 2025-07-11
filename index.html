@@ -11,11 +11,11 @@
 
     <style>
         :root {
-            --bg-color: #ffffff; --primary-text-color: #0f0f0f; --secondary-text-color: #606060; --surface-color: #f2f2f2; --surface-hover-color: #e5e5e5; --border-color: #cccccc; --input-bg: #ffffff; --icon-fill: #030303; --link-color: #065fd4; --yt-red: #ff0000;
+            --bg-color: #ffffff; --primary-text-color: #0f0f0f; --secondary-text-color: #606060; --surface-color: #f2f2f2; --surface-hover-color: #e5e5e5; --border-color: #cccccc; --input-bg: #ffffff; --icon-fill: #030303; --link-color: #065fd4; --yt-red: #ff0000; --danger-color: #cc0000;
         }
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg-color: #0f0f0f; --primary-text-color: #f1f1f1; --secondary-text-color: #aaaaaa; --surface-color: #272727; --surface-hover-color: #3f3f3f; --border-color: #3f3f3f; --input-bg: #121212; --icon-fill: #ffffff; --link-color: #3ea6ff;
+                --bg-color: #0f0f0f; --primary-text-color: #f1f1f1; --secondary-text-color: #aaaaaa; --surface-color: #272727; --surface-hover-color: #3f3f3f; --border-color: #3f3f3f; --input-bg: #121212; --icon-fill: #ffffff; --link-color: #3ea6ff; --danger-color: #ff4d4d;
             }
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -131,11 +131,12 @@
         .modal-content .input-group { margin-bottom: 16px; }
         .modal-content label { display: block; margin-bottom: 8px; font-weight: 500; }
         .modal-content input[type="password"], .modal-content input[type="text"] { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background-color: var(--input-bg); font-size: 16px; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 24px; }
         .modal-actions button { padding: 8px 16px; border-radius: 18px; border: none; font-weight: 500; cursor: pointer; }
         #saveApiKeyButton { background-color: var(--link-color); color: #fff; }
-        .modal-button { background-color: var(--surface-color); color: var(--primary-text-color); }
-        #resetAllButton { background-color: #c9302c; color: #fff; }
+        #closeModalButton { background-color: var(--surface-color); color: var(--primary-text-color); }
+        #openByIdButton { background-color: var(--surface-color); color: var(--primary-text-color); }
+        #resetAllButton { background-color: var(--danger-color); color: #fff; margin-right: auto; }
         
         #sidebar { display: flex; flex-direction: column; gap: 16px; }
         .sidebar-video-card { display: flex; gap: 8px; cursor: pointer; }
@@ -192,7 +193,7 @@
                             </div>
                             <div class="action-button" id="editModeToggle"></div>
                             <div class="action-button" id="saveButton"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 2H9v3h2z"/><path d="M1.5 0h11.586a1.5 1.5 0 0 1 1.06.44l1.415 1.414A1.5 1.5 0 0 1 16 2.914V14.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13A1.5 1.5 0 0 1 1.5 0M1 1.5v13a.5.5 0 0 0 .5.5H2v-4.5A1.5 1.5 0 0 1 3.5 9h9a1.5 1.5 0 0 1 1.5 1.5V15h.5a.5.5 0 0 0 .5-.5V2.914a.5.5 0 0 0-.146-.353l-1.415-1.415A.5.5 0 0 0 13.086 1H13v4.5A1.5 1.5 0 0 1 11.5 7h-7A1.5 1.5 0 0 1 3 5.5V1H1.5a.5.5 0 0 0-.5.5m3 4a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V1H4zM3 15h10v-4.5a.5.5 0 0 0-.5-.5h-9a.5.5 0 0 0-.5.5z"/></svg><span>保存</span></div>
-                            <div class="action-button" id="resetButton"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg><span>この動画をリセット</span></div>
+                            <div class="action-button" id="resetButton"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg><span>リセット</span></div>
                         </div>
                     </div>
                     <div class="description-box">
@@ -219,31 +220,29 @@
             <div class="shorts-container" id="shorts-container"></div>
         </div>
     </main>
-
+    
     <div id="settingsModal" class="modal-overlay">
         <div class="modal-content" id="modalContent">
             <h2>設定</h2>
             <div class="input-group">
                 <label for="apiKeyInputModal">YouTube Data API v3 Key</label>
                 <input type="password" id="apiKeyInputModal">
-                <button id="saveApiKeyButton" class="modal-button" style="margin-top: 8px;">APIキーを保存</button>
             </div>
              <div class="input-group">
                 <label for="videoIdInputModal">動画IDで開く</label>
                 <input type="text" id="videoIdInputModal" placeholder="動画IDを入力...">
-                <button id="openByIdButton" class="modal-button" style="margin-top: 8px;">この動画を開く</button>
             </div>
-             <div class="input-group">
-                <label>すべての変更をリセット</label>
-                <button id="resetAllButton">リセット実行</button>
-             </div>
             <div class="modal-actions">
-                <button id="closeModalButton" class="modal-button">閉じる</button>
+                <button id="resetAllButton">全ての変更をリセット</button>
+                <button id="openByIdButton">この動画を開く</button>
+                <button id="saveApiKeyButton">APIキーを保存</button>
+                <button id="closeModalButton">閉じる</button>
             </div>
         </div>
     </div>
     
     <script>
+        // Full JavaScript code follows...
         const ICONS = {
             edit: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pen" viewBox="0 0 16 16"><path d="m13.498.795.149-.149a1.207 1.207 0 1 1 1.707 1.708l-.149.148a1.5 1.5 0 0 1-.059 2.059L4.854 14.854a.5.5 0 0 1-.233.131l-4 1a.5.5 0 0 1-.606-.606l1-4a.5.5 0 0 1 .131-.232l9.642-9.642a.5.5 0 0 0-.642.056L6.854 4.854a.5.5 0 1 1-.708-.708L9.44.854A1.5 1.5 0 0 1 11.5.796a1.5 1.5 0 0 1 1.998-.001m-.644.766a.5.5 0 0 0-.707 0L1.95 11.756l-.764 3.057 3.057-.764L14.44 3.854a.5.5 0 0 0 0-.708z"/></svg> <span>編集モード</span>`,
             view: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye" viewBox="0 0 16 16"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/></svg> <span>視聴モード</span>`,
@@ -286,7 +285,7 @@
             app.search.input.addEventListener('click', e => e.stopPropagation());
             app.watch.editModeToggle.addEventListener('click', toggleEditMode);
             app.watch.saveButton.addEventListener('click', saveChanges);
-            app.watch.resetButton.addEventListener('click', resetCurrentVideo);
+            app.watch.resetButton.addEventListener('click', resetVideoChanges);
             app.watch.uploadButton.addEventListener('click', () => app.watch.imageUploadInput.click());
             app.watch.imageUploadInput.addEventListener('change', handleImageUpload);
             app.watch.verifiedSwitch.addEventListener('change', handleVerifiedToggle);
@@ -452,9 +451,12 @@
             app.watch.channelIcon.src = channel.iconUrl;
             
             const channelNameView = app.watch.channelName.querySelector('.view-element');
-            const channelNameText = channelNameView.childNodes[0] || document.createTextNode('');
-            channelNameText.textContent = channel.name.view;
-            if (channelNameView.childNodes.length === 0) channelNameView.appendChild(channelNameText);
+            const channelNameText = channelNameView.firstChild;
+            if (channelNameText && channelNameText.nodeType === Node.TEXT_NODE) {
+                channelNameText.textContent = channel.name.view;
+            } else {
+                channelNameView.prepend(document.createTextNode(channel.name.view));
+            }
             const channelNameEdit = app.watch.channelName.querySelector('.edit-element');
             channelNameEdit.value = channel.name.edit;
 
@@ -540,20 +542,17 @@
             alert('変更を保存しました！'); toggleEditMode(); displayData(savedData);
         }
 
-        function resetCurrentVideo() { 
-            if (confirm('この動画の変更をリセットしますか？')) {
-                localStorage.removeItem(`yt-editor-${state.currentVideoId}`); 
-                displayData(state.originalData); 
-                alert('リセットしました。');
-            }
-        }
+        function resetVideoChanges() { if (confirm('この動画への変更をリセットしますか？')) { localStorage.removeItem(`yt-editor-${state.currentVideoId}`); displayData(state.originalData); alert('リセットしました。'); } }
         
         function resetAllChanges() {
-            if (confirm('警告: 保存されているすべての動画の変更が削除されます。よろしいですか？')) {
-                const keys = Object.keys(localStorage).filter(k => k.startsWith('yt-editor-'));
-                keys.forEach(k => localStorage.removeItem(k));
-                alert(`${keys.length}件の動画データをリセットしました。`);
-                if(state.currentPage === 'watch') {
+            if (confirm('警告！\n保存されている全ての動画の変更がリセットされます。\nこの操作は元に戻せません。よろしいですか？')) {
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('yt-editor-')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                alert('すべての変更がリセットされました。');
+                if (state.currentPage === 'watch') {
                     displayData(state.originalData);
                 }
             }
@@ -573,13 +572,13 @@
         function updateVerifiedBadge(isVerified) {
             const nameContainer = app.watch.channelName.querySelector('.view-element');
             nameContainer.classList.toggle('is-verified', isVerified);
-            app.watch.verifiedSwitch.checked = isVerified;
             let badge = nameContainer.querySelector('.verified-badge');
             if (isVerified && !badge) {
                 badge = document.createElement('span'); badge.className = 'verified-badge';
                 badge.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-patch-check" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10.354 6.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7 8.793l2.646-2.647a.5.5 0 0 1 .708 0"/><path d="m10.273 2.513-.921-.944.715-.698.622.637.89-.011a2.89 2.89 0 0 1 2.924 2.924l-.01.89.636.622a2.89 2.89 0 0 1 0 4.134l-.637.622.011.89a2.89 2.89 0 0 1-2.924 2.924l-.89-.01-.622.636a2.89 2.89 0 0 1-4.134 0l-.622-.637-.89.011a2.89 2.89 0 0 1-2.924-2.924l.01-.89-.636-.622a2.89 2.89 0 0 1 0-4.134l.637-.622-.011-.89a2.89 2.89 0 0 1 2.924-2.924l.89.01.622-.636a2.89 2.89 0 0 1 4.134 0l-.715.698a1.89 1.89 0 0 0-2.704 0l-.92.944-1.32-.016a1.89 1.89 0 0 0-1.911 1.912l.016 1.318-.944.921a1.89 1.89 0 0 0 0 2.704l.944.92-.016 1.32a1.89 1.89 0 0 0 1.912 1.911l1.318-.016.921.944a1.89 1.89 0 0 0 2.704 0l.92-.944 1.32.016a1.89 1.89 0 0 0 1.911-1.912l-.016-1.318.944-.921a1.89 1.89 0 0 0 0-2.704l-.944-.92.016-1.32a1.89 1.89 0 0 0-1.912-1.911z"/></svg>`;
                 nameContainer.appendChild(badge);
             }
+            app.watch.verifiedSwitch.checked = isVerified;
         }
 
         async function handleSearchInput() {
