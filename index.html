@@ -124,7 +124,11 @@
         .comment-like svg { width: 16px; height: 16px; fill: var(--icon-fill); }
         .comment-like-count { font-size: 12px; color: var(--secondary-text-color); }
         .comment-like-count .edit-element { width: 60px; }
-        .replies { margin-top: 12px; padding-left: 20px; border-left: 2px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; }
+        .replies-container { margin-top: 12px; }
+        .toggle-replies-btn { color: var(--link-color); font-weight: 500; cursor: pointer; background: none; border: none; padding: 4px 8px; border-radius: 16px; }
+        .toggle-replies-btn:hover { background-color: var(--surface-color); }
+        .replies { margin-top: 8px; padding-left: 20px; border-left: 2px solid var(--border-color); display: none; flex-direction: column; gap: 12px; }
+        .replies.visible { display: flex; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 2000; display: none; }
         .modal-overlay.active { display: flex; }
@@ -224,7 +228,7 @@
             <div class="shorts-container" id="shorts-container"></div>
         </div>
     </main>
-    
+
     <div id="settingsModal" class="modal-overlay">
         <div class="modal-content" id="modalContent">
             <h2>設定</h2>
@@ -476,15 +480,7 @@
         
         function renderComments(comments) {
             app.watch.commentsContainer.innerHTML = '';
-            comments.forEach(commentData => {
-                const commentEl = createCommentElement(commentData);
-                if (commentData.replies && commentData.replies.length > 0) {
-                    const repliesContainer = document.createElement('div'); repliesContainer.className = 'replies';
-                    commentData.replies.forEach(replyData => { repliesContainer.appendChild(createCommentElement(replyData)); });
-                    commentEl.querySelector('.comment-body').appendChild(repliesContainer);
-                }
-                app.watch.commentsContainer.appendChild(commentEl);
-            });
+            comments.forEach(commentData => app.watch.commentsContainer.appendChild(createCommentElement(commentData)));
             app.watch.loadMoreCommentsBtn.style.display = state.commentsNextPageToken ? 'block' : 'none';
         }
 
@@ -493,30 +489,20 @@
             app.watch.loadMoreCommentsBtn.disabled = true;
             app.watch.loadMoreCommentsBtn.textContent = '読み込み中...';
             try {
-                const commentsData = await apiRequest('commentThreads', {
-                    part: 'snippet,replies', videoId: state.currentVideoId, order: 'relevance', pageToken: state.commentsNextPageToken
-                });
+                const commentsData = await apiRequest('commentThreads', { part: 'snippet,replies', videoId: state.currentVideoId, order: 'relevance', pageToken: state.commentsNextPageToken });
                 state.commentsNextPageToken = commentsData.nextPageToken;
                 
                 commentsData.items.forEach(item => {
-                    const c = item.snippet.topLevelComment.snippet;
-                    const commentData = {
+                    const c = item.snippet.topLevelComment.snippet, commentData = {
                         id: item.snippet.topLevelComment.id, authorName: c.authorDisplayName, authorIconUrl: c.authorProfileImageUrl,
                         text: { view: c.textDisplay, edit: c.textOriginal }, likeCount: { view: formatNumber(c.likeCount), edit: c.likeCount || 0 }, replies: []
                     };
                     if (item.replies) { commentData.replies = item.replies.comments.map(r => ({ id: r.id, authorName: r.snippet.authorDisplayName, authorIconUrl: r.snippet.authorProfileImageUrl, text: { view: r.snippet.textDisplay, edit: r.snippet.textOriginal }, likeCount: { view: formatNumber(r.snippet.likeCount), edit: r.snippet.likeCount || 0 } })); }
-                    
-                    const commentEl = createCommentElement(commentData);
-                    app.watch.commentsContainer.appendChild(commentEl);
+                    app.watch.commentsContainer.appendChild(createCommentElement(commentData));
                 });
                 
                 app.watch.loadMoreCommentsBtn.style.display = state.commentsNextPageToken ? 'block' : 'none';
-            } catch(e) {
-                alert('コメントの読み込みに失敗しました: ' + e.message);
-            } finally {
-                app.watch.loadMoreCommentsBtn.disabled = false;
-                app.watch.loadMoreCommentsBtn.textContent = 'さらに読み込む';
-            }
+            } catch(e) { alert('コメントの読み込みに失敗しました: ' + e.message); } finally { app.watch.loadMoreCommentsBtn.disabled = false; app.watch.loadMoreCommentsBtn.textContent = 'さらに読み込む'; }
         }
         
         function createVideoCard(video) {
@@ -603,6 +589,12 @@
         function updateVerifiedBadge(isVerified) {
             const nameContainer = app.watch.channelName.querySelector('.view-element');
             nameContainer.classList.toggle('is-verified', isVerified);
+            let badge = nameContainer.querySelector('.verified-badge');
+            if (isVerified && !badge) {
+                badge = document.createElement('span'); badge.className = 'verified-badge';
+                badge.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-patch-check" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10.354 6.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7 8.793l2.646-2.647a.5.5 0 0 1 .708 0"/><path d="m10.273 2.513-.921-.944.715-.698.622.637.89-.011a2.89 2.89 0 0 1 2.924 2.924l-.01.89.636.622a2.89 2.89 0 0 1 0 4.134l-.637.622.011.89a2.89 2.89 0 0 1-2.924 2.924l-.89-.01-.622.636a2.89 2.89 0 0 1-4.134 0l-.622-.637-.89.011a2.89 2.89 0 0 1-2.924-2.924l.01-.89-.636-.622a2.89 2.89 0 0 1 0-4.134l.637-.622-.011-.89a2.89 2.89 0 0 1 2.924-2.924l.89.01.622-.636a2.89 2.89 0 0 1 4.134 0l-.715.698a1.89 1.89 0 0 0-2.704 0l-.92.944-1.32-.016a1.89 1.89 0 0 0-1.911 1.912l.016 1.318-.944.921a1.89 1.89 0 0 0 0 2.704l.944.92-.016 1.32a1.89 1.89 0 0 0 1.912 1.911l1.318-.016.921.944a1.89 1.89 0 0 0 2.704 0l.92-.944 1.32.016a1.89 1.89 0 0 0 1.911-1.912l-.016-1.318.944-.921a1.89 1.89 0 0 0 0-2.704l-.944-.92.016-1.32a1.89 1.89 0 0 0-1.912-1.911z"/></svg>`;
+                nameContainer.appendChild(badge);
+            }
             app.watch.verifiedSwitch.checked = isVerified;
         }
 
@@ -663,7 +655,27 @@
 
         function createCommentElement(data) {
             const div = document.createElement('div'); div.className = 'comment-thread'; div.id = data.id;
-            div.innerHTML = `<img class="comment-author-icon" src="${data.authorIconUrl}" alt="author icon"><div class="comment-body"><div class="comment-meta"><span class="comment-author-name">${data.authorName}</span></div><div class="comment-text"><p class="view-element">${data.text.view.replace(/\n/g, '<br>')}</p><textarea class="edit-element">${data.text.edit}</textarea></div><div class="comment-actions"><div class="comment-like"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-hand-thumbs-up" viewBox="0 0 16 16"><path d="M8.864.046C7.908-.193 7.02.53 6.956 1.466c-.072 1.051-.23 2.016-.428 2.59-.125.36-.479 1.013-1.04 1.639-.557.623-1.282 1.178-2.131 1.41C2.685 7.288 2 7.87 2 8.72v4.001c0 .845.682 1.464 1.448 1.545 1.07.114 1.564.415 2.068.723l.048.03c.272.165.578.348.97.484.397.136.861.217 1.466.217h3.5c.937 0 1.599-.477 1.934-1.064a1.86 1.86 0 0 0 .254-.912c0-.152-.023-.312-.077-.464.201-.263.38-.578.488-.901.11-.33.172-.762.004-1.149.069-.13.12-.269.159-.403.077-.27.113-.568.113-.857 0-.288-.036-.585-.113-.856a2 2 0 0 0-.138-.362 1.9 1.9 0 0 0 .234-1.734c-.206-.592-.682-1.1-1.2-1.272-.847-.282-1.803-.276-2.516-.211a10 10 0 0 0-.443.05 9.4 9.4 0 0 0-.062-4.509A1.38 1.38 0 0 0 9.125.111zM11.5 14.721H8c-.51 0-.863-.069-1.14-.164-.281-.097-.506-.228-.776-.393l-.04-.024c-.555-.339-1.198-.731-2.49-.868-.333-.036-.554-.29-.554-.55V8.72c0-.254.226-.543.62-.65 1.095-.3 1.977-.996 2.614-1.708.635-.71 1.064-1.475 1.238-1.978.243-.7.407-1.768.482-2.85.025-.362.36-.594.667-.518l.262.066c.16.04.258.143.288.255a8.34 8.34 0 0 1-.145 4.725.5.5 0 0 0 .595.644l.003-.001.014-.003.058-.014a9 9 0 0 1 1.036-.157c.663-.06 1.457-.054 2.11.164.175.058.45.3.57.65.107.308.087.67-.266 1.022l-.353.353.353.354c.043.043.105.141.154.315.048.167.075.37.075.581 0 .212-.027.414-.075.582-.05.174-.111.272-.154.315l-.353.353.353.354c.047.047.109.177.005.488a2.2 2.2 0 0 1-.505.805l-.353.353.353.354c.006.005.041.05.041.17a.9.9 0 0 1-.121.416c-.165.288-.503.56-1.066.56z"/></svg><div class="comment-like-count"><span class="view-element">${data.likeCount.view}</span><input type="text" class="edit-element" value="${data.likeCount.edit}"></div></div></div></div>`;
+            let repliesHTML = '';
+            if (data.replies && data.replies.length > 0) {
+                repliesHTML = `
+                    <div class="replies-container">
+                        <button class="toggle-replies-btn">▼ ${data.replies.length}件の返信</button>
+                        <div class="replies">
+                            ${data.replies.map(createCommentElement).map(el => el.outerHTML).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            div.innerHTML = `<img class="comment-author-icon" src="${data.authorIconUrl}" alt="author icon"><div class="comment-body"><div class="comment-meta"><span class="comment-author-name">${data.authorName}</span></div><div class="comment-text"><p class="view-element">${data.text.view.replace(/\n/g, '<br>')}</p><textarea class="edit-element">${data.text.edit}</textarea></div><div class="comment-actions"><div class="comment-like"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-hand-thumbs-up" viewBox="0 0 16 16"><path d="M8.864.046C7.908-.193 7.02.53 6.956 1.466c-.072 1.051-.23 2.016-.428 2.59-.125.36-.479 1.013-1.04 1.639-.557.623-1.282 1.178-2.131 1.41C2.685 7.288 2 7.87 2 8.72v4.001c0 .845.682 1.464 1.448 1.545 1.07.114 1.564.415 2.068.723l.048.03c.272.165.578.348.97.484.397.136.861.217 1.466.217h3.5c.937 0 1.599-.477 1.934-1.064a1.86 1.86 0 0 0 .254-.912c0-.152-.023-.312-.077-.464.201-.263.38-.578.488-.901.11-.33.172-.762.004-1.149.069-.13.12-.269.159-.403.077-.27.113-.568.113-.857 0-.288-.036-.585-.113-.856a2 2 0 0 0-.138-.362 1.9 1.9 0 0 0 .234-1.734c-.206-.592-.682-1.1-1.2-1.272-.847-.282-1.803-.276-2.516-.211a10 10 0 0 0-.443.05 9.4 9.4 0 0 0-.062-4.509A1.38 1.38 0 0 0 9.125.111zM11.5 14.721H8c-.51 0-.863-.069-1.14-.164-.281-.097-.506-.228-.776-.393l-.04-.024c-.555-.339-1.198-.731-2.49-.868-.333-.036-.554-.29-.554-.55V8.72c0-.254.226-.543.62-.65 1.095-.3 1.977-.996 2.614-1.708.635-.71 1.064-1.475 1.238-1.978.243-.7.407-1.768.482-2.85.025-.362.36-.594.667-.518l.262.066c.16.04.258.143.288.255a8.34 8.34 0 0 1-.145 4.725.5.5 0 0 0 .595.644l.003-.001.014-.003.058-.014a9 9 0 0 1 1.036-.157c.663-.06 1.457-.054 2.11.164.175.058.45.3.57.65.107.308.087.67-.266 1.022l-.353.353.353.354c.043.043.105.141.154.315.048.167.075.37.075.581 0 .212-.027.414-.075.582-.05.174-.111.272-.154.315l-.353.353.353.354c.047.047.109.177.005.488a2.2 2.2 0 0 1-.505.805l-.353.353.353.354c.006.005.041.05.041.17a.9.9 0 0 1-.121.416c-.165.288-.503.56-1.066.56z"/></svg><div class="comment-like-count"><span class="view-element">${data.likeCount.view}</span><input type="text" class="edit-element" value="${data.likeCount.edit}"></div></div></div>${repliesHTML}</div>`;
+            
+            const toggleBtn = div.querySelector('.toggle-replies-btn');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', (e) => {
+                    const repliesEl = e.target.nextElementSibling;
+                    const isVisible = repliesEl.classList.toggle('visible');
+                    e.target.textContent = isVisible ? '▲ 返信を非表示' : `▼ ${data.replies.length}件の返信`;
+                });
+            }
             return div;
         }
     </script>
