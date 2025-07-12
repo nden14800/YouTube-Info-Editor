@@ -24,7 +24,7 @@
         
         #app-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; height: 56px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
         #app-main { flex-grow: 1; overflow-y: auto; overflow-x: hidden; }
-        .page { display: none; }
+        .page { display: none; height: 100%; }
         .page.active { display: block; }
         .container { max-width: 1700px; margin: 0 auto; padding: 24px; }
         .watch-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
@@ -129,7 +129,21 @@
         .toggle-replies-btn:hover { background-color: var(--surface-color); }
         .replies { margin-top: 8px; padding-left: 20px; border-left: 2px solid var(--border-color); display: none; flex-direction: column; gap: 12px; }
         .replies.visible { display: flex; }
-
+        
+        #shorts-page { background-color: #000; }
+        .shorts-container { height: 100%; scroll-snap-type: y mandatory; overflow-y: scroll; scrollbar-width: none; -ms-overflow-style: none; }
+        .shorts-container::-webkit-scrollbar { display: none; }
+        .short-player-wrapper { width: 100%; height: 100%; scroll-snap-align: start; position: relative; display: flex; justify-content: center; align-items: center; }
+        .short-video-element { height: 100%; width: auto; max-width: 100%; object-fit: contain; }
+        .short-ui-overlay { position: absolute; bottom: 0; left: 0; width: 100%; padding: 20px; color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); display: flex; justify-content: space-between; align-items: flex-end; background: linear-gradient(to top, rgba(0,0,0,0.7), transparent); }
+        .short-info { display: flex; flex-direction: column; gap: 8px; }
+        .short-channel { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+        .short-channel img { width: 32px; height: 32px; border-radius: 50%; }
+        .short-actions { position: absolute; bottom: 20px; right: 10px; display: flex; flex-direction: column; gap: 20px; align-items: center; }
+        .short-action-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+        .short-action-btn svg { width: 32px; height: 32px; fill: #fff; }
+        .short-action-btn span { font-size: 14px; font-weight: 500; }
+        
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 2000; display: none; }
         .modal-overlay.active { display: flex; }
         .modal-content { background-color: var(--bg-color); padding: 24px; border-radius: 12px; width: 90%; max-width: 500px; }
@@ -140,9 +154,11 @@
         .modal-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 24px; }
         .modal-actions button { padding: 8px 16px; border-radius: 18px; border: none; font-weight: 500; cursor: pointer; }
         #saveApiKeyButton { background-color: var(--link-color); color: #fff; }
-        #closeModalButton { background-color: var(--surface-color); color: var(--primary-text-color); }
-        #openByIdButton { background-color: var(--surface-color); color: var(--primary-text-color); }
+        #closeModalButton, #openByIdButton { background-color: var(--surface-color); color: var(--primary-text-color); }
         #resetAllButton { background-color: var(--danger-color); color: #fff; margin-right: auto; }
+        #commentsModal .modal-content { height: 80%; display: flex; flex-direction: column; }
+        #commentsModal .comments-header { flex-shrink: 0; }
+        #commentsModal #commentsContainer { flex-grow: 1; overflow-y: auto; }
         
         #sidebar { display: flex; flex-direction: column; gap: 16px; }
         .sidebar-video-card { display: flex; gap: 8px; cursor: pointer; }
@@ -162,6 +178,7 @@
             <button id="searchButton" aria-label="検索"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg></button>
         </div>
         <div class="header-right">
+             <button class="action-button" id="shortsButton">ショート</button>
             <button class="action-button" id="settingsButton"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/></svg></button>
         </div>
     </header>
@@ -228,7 +245,7 @@
             <div class="shorts-container" id="shorts-container"></div>
         </div>
     </main>
-
+    
     <div id="settingsModal" class="modal-overlay">
         <div class="modal-content" id="modalContent">
             <h2>設定</h2>
@@ -249,6 +266,17 @@
         </div>
     </div>
     
+    <div id="commentsModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="comments-header"><h2>コメント</h2></div>
+            <div id="commentsModalContainer"></div>
+            <button id="loadMoreModalComments">さらに読み込む</button>
+            <div class="modal-actions">
+                <button id="closeCommentsModalButton">閉じる</button>
+            </div>
+        </div>
+    </div>
+    
     <script>
         const ICONS = {
             edit: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pen" viewBox="0 0 16 16"><path d="m13.498.795.149-.149a1.207 1.207 0 1 1 1.707 1.708l-.149.148a1.5 1.5 0 0 1-.059 2.059L4.854 14.854a.5.5 0 0 1-.233.131l-4 1a.5.5 0 0 1-.606-.606l1-4a.5.5 0 0 1 .131-.232l9.642-9.642a.5.5 0 0 0-.642.056L6.854 4.854a.5.5 0 1 1-.708-.708L9.44.854A1.5 1.5 0 0 1 11.5.796a1.5 1.5 0 0 1 1.998-.001m-.644.766a.5.5 0 0 0-.707 0L1.95 11.756l-.764 3.057 3.057-.764L14.44 3.854a.5.5 0 0 0 0-.708z"/></svg> <span>編集モード</span>`,
@@ -259,6 +287,7 @@
             currentVideoId: null,
             currentLiveChat: { id: null, interval: null, nextPageToken: null },
             commentsNextPageToken: null,
+            modalCommentsNextPageToken: null,
             originalData: {},
             isEditMode: false,
         };
@@ -278,8 +307,10 @@
                 liveChat: { container: getEl('live-chat-container'), messages: getEl('live-chat-messages'), },
                 editModeToggle: getEl('editModeToggle'), saveButton: getEl('saveButton'), resetButton: getEl('resetButton'),
             },
+            shorts: { container: getEl('shorts-container'), },
             search: { input: getEl('searchInput'), button: getEl('searchButton'), suggestions: getEl('searchSuggestions'), },
-            settings: { modal: getEl('settingsModal'), modalContent: getEl('modalContent'), apiKeyInput: getEl('apiKeyInputModal'), saveButton: getEl('saveApiKeyButton'), closeButton: getEl('closeModalButton'), settingsButton: getEl('settingsButton'), videoIdInput: getEl('videoIdInputModal'), openByIdButton: getEl('openByIdButton'), resetAllButton: getEl('resetAllButton') }
+            settings: { modal: getEl('settingsModal'), modalContent: getEl('modalContent'), apiKeyInput: getEl('apiKeyInputModal'), saveButton: getEl('saveApiKeyButton'), closeButton: getEl('closeModalButton'), settingsButton: getEl('settingsButton'), videoIdInput: getEl('videoIdInputModal'), openByIdButton: getEl('openByIdButton'), resetAllButton: getEl('resetAllButton') },
+            commentsModal: { overlay: getEl('commentsModal'), container: getEl('commentsModalContainer'), loadMoreBtn: getEl('loadMoreModalComments'), closeBtn: getEl('closeCommentsModalButton') }
         };
         const API_BASE_URL = 'https://www.googleapis.com/youtube/v3';
 
@@ -287,6 +318,7 @@
 
         function init() {
             getEl('homeButton').addEventListener('click', () => navigateTo('home'));
+            getEl('shortsButton').addEventListener('click', () => navigateTo('shorts'));
             app.search.input.addEventListener('input', debounce(handleSearchInput, 300));
             app.search.input.addEventListener('keydown', e => { if (e.key === 'Enter') handleSearchSubmit(); });
             app.search.button.addEventListener('click', handleSearchSubmit);
@@ -298,7 +330,7 @@
             app.watch.uploadButton.addEventListener('click', () => app.watch.imageUploadInput.click());
             app.watch.imageUploadInput.addEventListener('change', handleImageUpload);
             app.watch.verifiedSwitch.addEventListener('change', handleVerifiedToggle);
-            app.watch.loadMoreCommentsBtn.addEventListener('click', loadMoreComments);
+            app.watch.loadMoreCommentsBtn.addEventListener('click', () => loadMoreComments(state.currentVideoId, app.watch.commentsContainer, 'commentsNextPageToken', app.watch.loadMoreCommentsBtn));
             app.settings.settingsButton.addEventListener('click', openSettingsModal);
             app.settings.saveButton.addEventListener('click', saveApiKey);
             app.settings.closeButton.addEventListener('click', closeSettingsModal);
@@ -306,36 +338,21 @@
             app.settings.modalContent.addEventListener('click', (e) => e.stopPropagation());
             app.settings.openByIdButton.addEventListener('click', openVideoById);
             app.settings.resetAllButton.addEventListener('click', resetAllChanges);
+            app.commentsModal.closeBtn.addEventListener('click', () => app.commentsModal.overlay.classList.remove('active'));
+            app.commentsModal.overlay.addEventListener('click', () => app.commentsModal.overlay.classList.remove('active'));
+            getEl('commentsModal').querySelector('.modal-content').addEventListener('click', e => e.stopPropagation());
+            
             navigateTo('home');
         }
         
-        function openSettingsModal() {
-            app.settings.apiKeyInput.value = localStorage.getItem('youtube_api_key') || '';
-            app.settings.modal.classList.add('active');
-        }
-        function closeSettingsModal() {
-            app.settings.modal.classList.remove('active');
-        }
+        function openSettingsModal() { app.settings.apiKeyInput.value = localStorage.getItem('youtube_api_key') || ''; app.settings.modal.classList.add('active'); }
+        function closeSettingsModal() { app.settings.modal.classList.remove('active'); }
         function saveApiKey() {
             const newKey = app.settings.apiKeyInput.value.trim();
-            if(newKey) {
-                localStorage.setItem('youtube_api_key', newKey);
-                alert('APIキーを保存しました。');
-                closeSettingsModal();
-                if(state.currentPage === 'home') loadHomePage();
-            } else {
-                alert('APIキーを入力してください。');
-            }
+            if(newKey) { localStorage.setItem('youtube_api_key', newKey); alert('APIキーを保存しました。'); closeSettingsModal(); if(state.currentPage === 'home') loadHomePage(); }
+            else { alert('APIキーを入力してください。'); }
         }
-        function openVideoById(){
-            const videoId = app.settings.videoIdInput.value.trim();
-            if(videoId){
-                closeSettingsModal();
-                navigateTo('watch', { videoId: videoId });
-            } else {
-                alert('動画IDを入力してください。');
-            }
-        }
+        function openVideoById(){ const videoId = app.settings.videoIdInput.value.trim(); if(videoId){ closeSettingsModal(); navigateTo('watch', { videoId: videoId }); } else { alert('動画IDを入力してください。'); }}
 
         function navigateTo(page, params = {}) {
             for (const pageKey in app.pages) { app.pages[pageKey].style.display = 'none'; }
@@ -346,6 +363,7 @@
             switch (page) {
                 case 'home': loadHomePage(params.query); break;
                 case 'watch': loadWatchPage(params.videoId); break;
+                case 'shorts': loadShortsPage(); break;
             }
         }
 
@@ -363,9 +381,7 @@
                 videoGrid.className = 'video-grid';
                 videos.forEach(video => { videoGrid.appendChild(createVideoCard(video)); });
                 app.home.container.appendChild(videoGrid);
-            } catch (e) {
-                app.home.container.innerHTML = `<h2>エラー: ${e.message}</h2>`;
-            }
+            } catch (e) { app.home.container.innerHTML = `<h2>エラー: ${e.message}</h2>`; }
         }
 
         async function loadWatchPage(videoId) {
@@ -475,22 +491,24 @@
             setData(app.watch.uploadDate, video.uploadDate.view, video.uploadDate.edit);
             setData(app.watch.description, video.description.view, video.description.edit);
             setData(app.watch.commentCount, video.commentCount.view, video.commentCount.edit);
-            renderComments(comments);
+            renderComments(comments, app.watch.commentsContainer, 'commentsNextPageToken', app.watch.loadMoreCommentsBtn);
         }
         
-        function renderComments(comments) {
-            app.watch.commentsContainer.innerHTML = '';
-            comments.forEach(commentData => app.watch.commentsContainer.appendChild(createCommentElement(commentData)));
-            app.watch.loadMoreCommentsBtn.style.display = state.commentsNextPageToken ? 'block' : 'none';
+        function renderComments(comments, container, tokenName, loadMoreBtn) {
+            container.innerHTML = '';
+            comments.forEach(commentData => container.appendChild(createCommentElement(commentData)));
+            loadMoreBtn.style.display = state[tokenName] ? 'block' : 'none';
         }
 
-        async function loadMoreComments() {
-            if (!state.commentsNextPageToken) return;
-            app.watch.loadMoreCommentsBtn.disabled = true;
-            app.watch.loadMoreCommentsBtn.textContent = '読み込み中...';
+        async function loadMoreComments(videoId, container, tokenName, loadMoreBtn) {
+            if (!state[tokenName]) return;
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.textContent = '読み込み中...';
             try {
-                const commentsData = await apiRequest('commentThreads', { part: 'snippet,replies', videoId: state.currentVideoId, order: 'relevance', pageToken: state.commentsNextPageToken });
-                state.commentsNextPageToken = commentsData.nextPageToken;
+                const commentsData = await apiRequest('commentThreads', {
+                    part: 'snippet,replies', videoId: videoId, order: 'relevance', pageToken: state[tokenName]
+                });
+                state[tokenName] = commentsData.nextPageToken;
                 
                 commentsData.items.forEach(item => {
                     const c = item.snippet.topLevelComment.snippet, commentData = {
@@ -498,11 +516,11 @@
                         text: { view: c.textDisplay, edit: c.textOriginal }, likeCount: { view: formatNumber(c.likeCount), edit: c.likeCount || 0 }, replies: []
                     };
                     if (item.replies) { commentData.replies = item.replies.comments.map(r => ({ id: r.id, authorName: r.snippet.authorDisplayName, authorIconUrl: r.snippet.authorProfileImageUrl, text: { view: r.snippet.textDisplay, edit: r.snippet.textOriginal }, likeCount: { view: formatNumber(r.snippet.likeCount), edit: r.snippet.likeCount || 0 } })); }
-                    app.watch.commentsContainer.appendChild(createCommentElement(commentData));
+                    container.appendChild(createCommentElement(commentData));
                 });
                 
-                app.watch.loadMoreCommentsBtn.style.display = state.commentsNextPageToken ? 'block' : 'none';
-            } catch(e) { alert('コメントの読み込みに失敗しました: ' + e.message); } finally { app.watch.loadMoreCommentsBtn.disabled = false; app.watch.loadMoreCommentsBtn.textContent = 'さらに読み込む'; }
+                loadMoreBtn.style.display = state[tokenName] ? 'block' : 'none';
+            } catch(e) { alert('コメントの読み込みに失敗しました: ' + e.message); } finally { loadMoreBtn.disabled = false; loadMoreBtn.textContent = 'さらに読み込む'; }
         }
         
         function createVideoCard(video) {
@@ -589,12 +607,6 @@
         function updateVerifiedBadge(isVerified) {
             const nameContainer = app.watch.channelName.querySelector('.view-element');
             nameContainer.classList.toggle('is-verified', isVerified);
-            let badge = nameContainer.querySelector('.verified-badge');
-            if (isVerified && !badge) {
-                badge = document.createElement('span'); badge.className = 'verified-badge';
-                badge.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-patch-check" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10.354 6.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7 8.793l2.646-2.647a.5.5 0 0 1 .708 0"/><path d="m10.273 2.513-.921-.944.715-.698.622.637.89-.011a2.89 2.89 0 0 1 2.924 2.924l-.01.89.636.622a2.89 2.89 0 0 1 0 4.134l-.637.622.011.89a2.89 2.89 0 0 1-2.924 2.924l-.89-.01-.622.636a2.89 2.89 0 0 1-4.134 0l-.622-.637-.89.011a2.89 2.89 0 0 1-2.924-2.924l.01-.89-.636-.622a2.89 2.89 0 0 1 0-4.134l.637-.622-.011-.89a2.89 2.89 0 0 1 2.924-2.924l.89.01.622-.636a2.89 2.89 0 0 1 4.134 0l-.715.698a1.89 1.89 0 0 0-2.704 0l-.92.944-1.32-.016a1.89 1.89 0 0 0-1.911 1.912l.016 1.318-.944.921a1.89 1.89 0 0 0 0 2.704l.944.92-.016 1.32a1.89 1.89 0 0 0 1.912 1.911l1.318-.016.921.944a1.89 1.89 0 0 0 2.704 0l.92-.944 1.32.016a1.89 1.89 0 0 0 1.911-1.912l-.016-1.318.944-.921a1.89 1.89 0 0 0 0-2.704l-.944-.92.016-1.32a1.89 1.89 0 0 0-1.912-1.911z"/></svg>`;
-                nameContainer.appendChild(badge);
-            }
             app.watch.verifiedSwitch.checked = isVerified;
         }
 
