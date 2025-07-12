@@ -111,6 +111,8 @@
         .comments-header { display: flex; align-items: center; gap: 24px; margin-bottom: 24px; }
         .comments-header h2 { font-size: 20px; font-weight: 700; }
         #commentsContainer { display: flex; flex-direction: column; gap: 16px; }
+        #loadMoreComments { background-color: var(--surface-color); border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 18px; cursor: pointer; margin: 16px auto; display: none; }
+        #loadMoreComments:hover { background-color: var(--surface-hover-color); }
         .comment-thread { display: flex; gap: 12px; }
         .comment-author-icon { width: 40px; height: 40px; border-radius: 50%; background-color: var(--surface-color); flex-shrink: 0; }
         .comment-body { flex-grow: 1; }
@@ -212,6 +214,7 @@
                     <div class="comments-section">
                         <div class="comments-header"><div id="commentCount"><h2><span class="view-element"></span><input type="text" class="edit-element"></h2></div></div>
                         <div id="commentsContainer"></div>
+                        <button id="loadMoreComments">さらに読み込む</button>
                     </div>
                 </div>
                 <div id="sidebar"></div>
@@ -221,7 +224,7 @@
             <div class="shorts-container" id="shorts-container"></div>
         </div>
     </main>
-
+    
     <div id="settingsModal" class="modal-overlay">
         <div class="modal-content" id="modalContent">
             <h2>設定</h2>
@@ -251,6 +254,7 @@
             currentPage: 'home',
             currentVideoId: null,
             currentLiveChat: { id: null, interval: null, nextPageToken: null },
+            commentsNextPageToken: null,
             originalData: {},
             isEditMode: false,
         };
@@ -265,7 +269,8 @@
                 channelName: getEl('channelName'), verifiedSwitch: getEl('verifiedSwitch'), subscriberCount: getEl('subscriberCount'),
                 likeCount: getEl('likeCount'), viewCount: getEl('viewCount'), liveViewers: getEl('live-viewers'),
                 uploadDate: getEl('uploadDate'), description: getEl('videoDescription'), commentCount: getEl('commentCount'),
-                commentsContainer: getEl('commentsContainer'), sidebar: getEl('sidebar'),
+                commentsContainer: getEl('commentsContainer'), loadMoreCommentsBtn: getEl('loadMoreComments'),
+                sidebar: getEl('sidebar'),
                 liveChat: { container: getEl('live-chat-container'), messages: getEl('live-chat-messages'), },
                 editModeToggle: getEl('editModeToggle'), saveButton: getEl('saveButton'), resetButton: getEl('resetButton'),
             },
@@ -289,6 +294,7 @@
             app.watch.uploadButton.addEventListener('click', () => app.watch.imageUploadInput.click());
             app.watch.imageUploadInput.addEventListener('change', handleImageUpload);
             app.watch.verifiedSwitch.addEventListener('change', handleVerifiedToggle);
+            app.watch.loadMoreCommentsBtn.addEventListener('click', loadMoreComments);
             app.settings.settingsButton.addEventListener('click', openSettingsModal);
             app.settings.saveButton.addEventListener('click', saveApiKey);
             app.settings.closeButton.addEventListener('click', closeSettingsModal);
@@ -360,22 +366,23 @@
 
         async function loadWatchPage(videoId) {
             if (!videoId) return navigateTo('home');
+            app.watch.commentsContainer.innerHTML = '';
+            app.watch.loadMoreCommentsBtn.style.display = 'none';
             try {
                 const videoDetails = await apiRequest('videos', { part: 'snippet,statistics,liveStreamingDetails,contentDetails', id: videoId });
                 if (!videoDetails.items.length) throw new Error('動画が見つかりません。');
                 const video = videoDetails.items[0];
                 const channelId = video.snippet.channelId;
-                const [channelDetails, commentsData, relatedVideos] = await Promise.all([
+                const [channelDetails, commentsData] = await Promise.all([
                     apiRequest('channels', { part: 'snippet,statistics', id: channelId }),
                     apiRequest('commentThreads', { part: 'snippet,replies', videoId: videoId, order: 'relevance' }).catch(() => ({ items: [] })),
-                    apiRequest('search', { part: 'snippet', relatedToVideoId: videoId, type: 'video', maxResults: 20 }).catch(() => ({ items: [] }))
                 ]);
                 const channel = channelDetails.items[0];
                 state.originalData = parseApiData(video, channel, commentsData);
                 state.currentVideoId = videoId;
+                state.commentsNextPageToken = commentsData.nextPageToken;
                 const savedData = localStorage.getItem(`yt-editor-${videoId}`);
                 displayData(savedData ? JSON.parse(savedData) : state.originalData);
-                renderSidebar(await processSearchResults(relatedVideos.items));
                 app.watch.liveChat.container.style.display = 'none';
                 app.watch.liveViewers.style.display = 'none';
                 if (video.snippet.liveBroadcastContent === 'live') {
@@ -451,10 +458,7 @@
             app.watch.channelIcon.src = channel.iconUrl;
             
             const channelNameView = app.watch.channelName.querySelector('.view-element');
-            // Clear previous text nodes to prevent duplication
-            Array.from(channelNameView.childNodes).forEach(node => {
-                if(node.nodeType === Node.TEXT_NODE) node.remove();
-            });
+            Array.from(channelNameView.childNodes).forEach(node => { if(node.nodeType === Node.TEXT_NODE) node.remove(); });
             channelNameView.prepend(document.createTextNode(channel.name.view));
             const channelNameEdit = app.watch.channelName.querySelector('.edit-element');
             channelNameEdit.value = channel.name.edit;
@@ -467,6 +471,10 @@
             setData(app.watch.uploadDate, video.uploadDate.view, video.uploadDate.edit);
             setData(app.watch.description, video.description.view, video.description.edit);
             setData(app.watch.commentCount, video.commentCount.view, video.commentCount.edit);
+            renderComments(comments);
+        }
+        
+        function renderComments(comments) {
             app.watch.commentsContainer.innerHTML = '';
             comments.forEach(commentData => {
                 const commentEl = createCommentElement(commentData);
@@ -477,14 +485,37 @@
                 }
                 app.watch.commentsContainer.appendChild(commentEl);
             });
-            if (state.isEditMode) {
-                app.pages.watch.classList.add('edit-mode');
-                app.watch.editModeToggle.innerHTML = ICONS.view;
-                app.watch.saveButton.style.display = 'flex';
-            } else {
-                app.pages.watch.classList.remove('edit-mode');
-                app.watch.editModeToggle.innerHTML = ICONS.edit;
-                app.watch.saveButton.style.display = 'none';
+            app.watch.loadMoreCommentsBtn.style.display = state.commentsNextPageToken ? 'block' : 'none';
+        }
+
+        async function loadMoreComments() {
+            if (!state.commentsNextPageToken) return;
+            app.watch.loadMoreCommentsBtn.disabled = true;
+            app.watch.loadMoreCommentsBtn.textContent = '読み込み中...';
+            try {
+                const commentsData = await apiRequest('commentThreads', {
+                    part: 'snippet,replies', videoId: state.currentVideoId, order: 'relevance', pageToken: state.commentsNextPageToken
+                });
+                state.commentsNextPageToken = commentsData.nextPageToken;
+                
+                commentsData.items.forEach(item => {
+                    const c = item.snippet.topLevelComment.snippet;
+                    const commentData = {
+                        id: item.snippet.topLevelComment.id, authorName: c.authorDisplayName, authorIconUrl: c.authorProfileImageUrl,
+                        text: { view: c.textDisplay, edit: c.textOriginal }, likeCount: { view: formatNumber(c.likeCount), edit: c.likeCount || 0 }, replies: []
+                    };
+                    if (item.replies) { commentData.replies = item.replies.comments.map(r => ({ id: r.id, authorName: r.snippet.authorDisplayName, authorIconUrl: r.snippet.authorProfileImageUrl, text: { view: r.snippet.textDisplay, edit: r.snippet.textOriginal }, likeCount: { view: formatNumber(r.snippet.likeCount), edit: r.snippet.likeCount || 0 } })); }
+                    
+                    const commentEl = createCommentElement(commentData);
+                    app.watch.commentsContainer.appendChild(commentEl);
+                });
+                
+                app.watch.loadMoreCommentsBtn.style.display = state.commentsNextPageToken ? 'block' : 'none';
+            } catch(e) {
+                alert('コメントの読み込みに失敗しました: ' + e.message);
+            } finally {
+                app.watch.loadMoreCommentsBtn.disabled = false;
+                app.watch.loadMoreCommentsBtn.textContent = 'さらに読み込む';
             }
         }
         
@@ -572,12 +603,6 @@
         function updateVerifiedBadge(isVerified) {
             const nameContainer = app.watch.channelName.querySelector('.view-element');
             nameContainer.classList.toggle('is-verified', isVerified);
-            let badge = nameContainer.querySelector('.verified-badge');
-            if (isVerified && !badge) {
-                badge = document.createElement('span'); badge.className = 'verified-badge';
-                badge.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-patch-check" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10.354 6.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7 8.793l2.646-2.647a.5.5 0 0 1 .708 0"/><path d="m10.273 2.513-.921-.944.715-.698.622.637.89-.011a2.89 2.89 0 0 1 2.924 2.924l-.01.89.636.622a2.89 2.89 0 0 1 0 4.134l-.637.622.011.89a2.89 2.89 0 0 1-2.924 2.924l-.89-.01-.622.636a2.89 2.89 0 0 1-4.134 0l-.622-.637-.89.011a2.89 2.89 0 0 1-2.924-2.924l.01-.89-.636-.622a2.89 2.89 0 0 1 0-4.134l.637-.622-.011-.89a2.89 2.89 0 0 1 2.924-2.924l.89.01.622-.636a2.89 2.89 0 0 1 4.134 0l-.715.698a1.89 1.89 0 0 0-2.704 0l-.92.944-1.32-.016a1.89 1.89 0 0 0-1.911 1.912l.016 1.318-.944.921a1.89 1.89 0 0 0 0 2.704l.944.92-.016 1.32a1.89 1.89 0 0 0 1.912 1.911l1.318-.016.921.944a1.89 1.89 0 0 0 2.704 0l.92-.944 1.32.016a1.89 1.89 0 0 0 1.911-1.912l-.016-1.318.944-.921a1.89 1.89 0 0 0 0-2.704l-.944-.92.016-1.32a1.89 1.89 0 0 0-1.912-1.911z"/></svg>`;
-                nameContainer.appendChild(badge);
-            }
             app.watch.verifiedSwitch.checked = isVerified;
         }
 
