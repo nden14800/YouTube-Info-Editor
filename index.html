@@ -41,6 +41,10 @@
         .suggestion-item { padding: 8px 16px; cursor: pointer; }
         .suggestion-item:hover { background-color: var(--surface-color); }
         .header-right { display: flex; align-items: center; gap: 8px; }
+        
+        .action-button { display: flex; align-items: center; background-color: var(--surface-color); border-radius: 18px; cursor: pointer; transition: background-color .2s; padding: 8px 16px; border: none; font-family: inherit; font-size: 14px; font-weight: 500; color: var(--primary-text-color); }
+        .action-button:hover { background-color: var(--surface-hover-color); }
+        .action-button svg { width: 20px; height: 20px; fill: var(--icon-fill); margin-right: 8px; }
 
         #home-page .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
         .video-card { cursor: pointer; }
@@ -75,10 +79,8 @@
         .is-verified .verified-badge { display: inline-block; }
         #subscriberCount { color: var(--secondary-text-color); }
         .action-buttons { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .action-button, .like-dislike-buttons { display: flex; align-items: center; background-color: var(--surface-color); border-radius: 18px; cursor: pointer; transition: background-color .2s; }
-        .action-button:hover, .like-dislike-buttons:hover { background-color: var(--surface-hover-color); }
-        .action-button { padding: 8px 16px; }
-        .action-button svg, .switch-container svg { width: 20px; height: 20px; fill: var(--icon-fill); margin-right: 8px; }
+        .like-dislike-buttons { display: flex; align-items: center; background-color: var(--surface-color); border-radius: 18px; cursor: pointer; transition: background-color .2s; }
+        .like-dislike-buttons:hover { background-color: var(--surface-hover-color); }
         #saveButton { display: none; }
         .like-dislike-buttons .btn { padding: 6px 12px; display: flex; align-items: center; gap: 6px; font-weight: 500; }
         .like-dislike-buttons svg { width: 20px; height: 20px; fill: var(--icon-fill); }
@@ -256,9 +258,9 @@
                 <label for="videoIdInputModal">動画IDで開く</label>
                 <input type="text" id="videoIdInputModal" placeholder="動画IDを入力...">
             </div>
-            <div class="input-group" style="display: flex; align-items: center; gap: 10px;">
-                <label for="showPopularSwitch" style="margin-bottom: 0;">起動時におすすめ動画を表示</label>
-                <label class="switch"><input type="checkbox" id="showPopularSwitch"><span class="slider"></span></label>
+             <div class="input-group" style="display: flex; align-items: center; gap: 10px;">
+                <label for="showPopularToggle" style="margin-bottom: 0;">ホームページにおすすめを表示</label>
+                <label class="switch"><input type="checkbox" id="showPopularToggle"><span class="slider"></span></label>
             </div>
             <div class="modal-actions">
                 <button id="resetAllButton">全ての変更をリセット</button>
@@ -268,7 +270,7 @@
             </div>
         </div>
     </div>
-    
+
     <div id="shorts-comments-modal" class="modal-overlay">
         <div class="modal-content">
             <h2>コメント</h2>
@@ -278,9 +280,9 @@
             </div>
         </div>
     </div>
-
+    
     <script>
-        // Full JavaScript code follows...
+        // All JavaScript code follows...
         const ICONS = {
             edit: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pen" viewBox="0 0 16 16"><path d="m13.498.795.149-.149a1.207 1.207 0 1 1 1.707 1.708l-.149.148a1.5 1.5 0 0 1-.059 2.059L4.854 14.854a.5.5 0 0 1-.233.131l-4 1a.5.5 0 0 1-.606-.606l1-4a.5.5 0 0 1 .131-.232l9.642-9.642a.5.5 0 0 0-.642.056L6.854 4.854a.5.5 0 1 1-.708-.708L9.44.854A1.5 1.5 0 0 1 11.5.796a1.5 1.5 0 0 1 1.998-.001m-.644.766a.5.5 0 0 0-.707 0L1.95 11.756l-.764 3.057 3.057-.764L14.44 3.854a.5.5 0 0 0 0-.708z"/></svg> <span>編集モード</span>`,
             view: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye" viewBox="0 0 16 16"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/></svg> <span>視聴モード</span>`,
@@ -317,7 +319,14 @@
                 closeCommentsBtn: getEl('close-shorts-comments-modal'),
             },
             search: { input: getEl('searchInput'), button: getEl('searchButton'), suggestions: getEl('searchSuggestions'), },
-            settings: { modal: getEl('settingsModal'), modalContent: getEl('modalContent'), apiKeyInput: getEl('apiKeyInputModal'), saveButton: getEl('saveApiKeyButton'), closeButton: getEl('closeModalButton'), settingsButton: getEl('settingsButton'), videoIdInput: getEl('videoIdInputModal'), openByIdButton: getEl('openByIdButton'), resetAllButton: getEl('resetAllButton'), showPopularSwitch: getEl('showPopularSwitch') }
+            settings: { 
+                modal: getEl('settingsModal'), modalContent: getEl('modalContent'), 
+                apiKeyInput: getEl('apiKeyInputModal'), saveButton: getEl('saveApiKeyButton'), 
+                closeButton: getEl('closeModalButton'), settingsButton: getEl('settingsButton'), 
+                videoIdInput: getEl('videoIdInputModal'), openByIdButton: getEl('openByIdButton'), 
+                resetAllButton: getEl('resetAllButton'),
+                showPopularToggle: getEl('showPopularToggle')
+            }
         };
         const API_BASE_URL = 'https://www.googleapis.com/youtube/v3';
 
@@ -325,7 +334,7 @@
 
         function init() {
             getEl('homeButton').addEventListener('click', () => navigateTo('home'));
-            getEl('shortsButton').addEventListener('click', () => navigateTo('shorts'));
+            getEl('shortsButton')?.addEventListener('click', () => navigateTo('shorts'));
             app.search.input.addEventListener('input', debounce(handleSearchInput, 300));
             app.search.input.addEventListener('keydown', e => { if (e.key === 'Enter') handleSearchSubmit(); });
             app.search.button.addEventListener('click', handleSearchSubmit);
@@ -347,28 +356,24 @@
             app.settings.modalContent.addEventListener('click', (e) => e.stopPropagation());
             app.settings.openByIdButton.addEventListener('click', openVideoById);
             app.settings.resetAllButton.addEventListener('click', resetAllChanges);
-            app.settings.showPopularSwitch.checked = localStorage.getItem('showPopular') !== 'false';
-            app.settings.showPopularSwitch.addEventListener('change', (e) => {
-                localStorage.setItem('showPopular', e.target.checked);
-            });
-            
+            app.settings.showPopularToggle.addEventListener('change', saveHomepagePreference);
+            app.settings.showPopularToggle.checked = localStorage.getItem('show_popular_videos') !== 'false';
+
             state.shorts.intersectionObserver = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     const video = entry.target.querySelector('video');
-                    if (entry.isIntersecting) {
-                        video.play().catch(e => console.error("Autoplay failed:", e));
-                    } else {
-                        video.pause();
+                    if(video){
+                         if (entry.isIntersecting) {
+                            video.play().catch(e => console.error("Autoplay failed:", e));
+                        } else {
+                            video.pause();
+                        }
                     }
                 });
             }, { threshold: 0.5 });
             
             navigateTo('home');
         }
-        
-        // ... (The rest of the JS code remains the same as the last provided version,
-        // with the addition of the new/modified functions and event listeners)
-        // For brevity, only showing the new/modified functions in this block.
         
         function openSettingsModal() {
             app.settings.apiKeyInput.value = localStorage.getItem('youtube_api_key') || '';
@@ -397,6 +402,9 @@
                 alert('動画IDを入力してください。');
             }
         }
+        function saveHomepagePreference() {
+            localStorage.setItem('show_popular_videos', app.settings.showPopularToggle.checked);
+        }
 
         function navigateTo(page, params = {}) {
             for (const pageKey in app.pages) { app.pages[pageKey].style.display = 'none'; }
@@ -421,12 +429,15 @@
         async function loadHomePage(query = null) {
             app.home.container.innerHTML = '<h2>Loading...</h2>';
             try {
-                if (localStorage.getItem('showPopular') === 'false' && !query) {
-                    app.home.container.innerHTML = '<h2>検索するか、設定から動画IDを指定してください。</h2>';
-                    return;
-                }
                 const apiKey = localStorage.getItem('youtube_api_key');
                 if (!apiKey) throw new Error('APIキーが設定されていません。右上の設定ボタンからキーを入力してください。');
+                
+                const showPopular = localStorage.getItem('show_popular_videos') !== 'false';
+                if (!query && !showPopular) {
+                    app.home.container.innerHTML = '<h2>設定で「おすすめ動画」の表示がオフになっています。</h2>';
+                    return;
+                }
+
                 const params = query ? { part: 'snippet', q: query, type: 'video', maxResults: 20 } : { part: 'snippet,contentDetails,statistics', chart: 'mostPopular', regionCode: 'JP', maxResults: 20 };
                 const endpoint = query ? 'search' : 'videos';
                 const data = await apiRequest(endpoint, params);
@@ -487,28 +498,25 @@
                 let shortsData = [];
                 if (startVideoId && !state.shorts.items.some(v => v.id === startVideoId)) {
                     const videoDetails = await apiRequest('videos', { part: 'snippet,statistics', id: startVideoId });
-                    shortsData.push(...videoDetails.items);
+                    shortsData = videoDetails.items;
                 }
                 
-                if(!state.shorts.nextPageToken) { // Only fetch more if we don't have a token, or if we need more
-                    const data = await apiRequest('search', { part: 'snippet', q: '#shorts', type: 'video', maxResults: 10, pageToken: state.shorts.nextPageToken || '' });
-                    const searchResults = await processSearchResults(data.items);
-                    shortsData.push(...searchResults.filter(v => v.id !== startVideoId));
-                    state.shorts.nextPageToken = data.nextPageToken;
-                }
-
-                if (state.shorts.items.length === 0) app.shorts.container.innerHTML = '';
+                const data = await apiRequest('search', { part: 'snippet', q: '#shorts', type: 'video', maxResults: 10, pageToken: state.shorts.nextPageToken || '' });
+                const searchResults = await processSearchResults(data.items);
+                shortsData = shortsData.concat(searchResults.filter(v => v.id !== startVideoId && !state.shorts.items.some(existing => existing.id === v.id)));
                 
-                shortsData.forEach(async (short) => {
+                if (state.shorts.items.length === 0 && !startVideoId) app.shorts.container.innerHTML = '';
+                
+                shortsData.forEach(short => {
                     if(short && short.snippet && !state.shorts.items.some(v => v.id === short.id)) {
                         state.shorts.items.push(short);
-                        const channelDetails = await apiRequest('channels', { part: 'snippet', id: short.snippet.channelId });
-                        const player = createShortPlayer(short, channelDetails.items[0]);
+                        const player = createShortPlayer(short);
                         app.shorts.container.appendChild(player);
                         state.shorts.intersectionObserver.observe(player);
                     }
                 });
-                
+                state.shorts.nextPageToken = data.nextPageToken;
+
                 if (startVideoId) {
                     setTimeout(() => {
                         const targetPlayer = app.shorts.container.querySelector(`.short-player-wrapper[data-video-id="${startVideoId}"]`);
@@ -520,6 +528,22 @@
                 app.shorts.container.innerHTML = `<h2>エラー: ${e.message}</h2>`;
             } finally {
                 state.shorts.isLoading = false;
+            }
+        }
+        
+        function isShort(video) {
+            if (!video || !video.snippet) return false;
+            const { title, description, tags } = video.snippet;
+            const searchText = `${title} ${description}`.toLowerCase();
+            if (searchText.includes('#shorts')) return true;
+            if (tags && tags.some(tag => tag.toLowerCase() === 'shorts')) return true;
+            return false;
+        }
+        
+        function handleShortsScroll() {
+            const container = app.shorts.container;
+            if (container.scrollTop + container.clientHeight >= container.scrollHeight - 300) {
+                loadShortsPage(null);
             }
         }
 
@@ -541,52 +565,153 @@
                 app.shorts.commentsContainer.innerHTML = 'Failed to load comments.';
             }
         }
-        
-        function handleShortsScroll() {
-            const container = app.shorts.container;
-            if (container.scrollTop + container.clientHeight >= container.scrollHeight - 300) {
-                loadShortsPage(null, true); // true for isLoadMore
-            }
-        }
-        
-        function isShort(video) {
-            if (!video || !video.snippet) return false;
-            const { title, description } = video.snippet;
-            const searchText = `${title} ${description}`.toLowerCase();
-            return searchText.includes('#shorts');
+
+        async function apiRequest(endpoint, params) {
+            const apiKey = localStorage.getItem('youtube_api_key');
+            if (!apiKey) throw new Error('APIキーが見つかりません。');
+            const url = new URL(`${API_BASE_URL}/${endpoint}`);
+            url.searchParams.append('key', apiKey);
+            for (const key in params) { url.searchParams.append(key, params[key]); }
+            const response = await fetch(url);
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message);
+            return data;
         }
 
-        // ... rest of JS is identical to the previous version
-        // The full, correct script is provided in the final single HTML file.
-        // This is just to confirm the structure for the thought process.
+        async function processSearchResults(items) {
+            const videoIds = items.map(item => (item.id.videoId || item.id)).filter(Boolean);
+            if (!videoIds.length) return [];
+            const videoDetails = await apiRequest('videos', { part: 'snippet,statistics', id: videoIds.join(',') });
+            return videoDetails.items;
+        }
+
+        function parseApiData(video, channel, commentsData) {
+            const s = video.snippet, stats = video.statistics || {}, live = video.liveStreamingDetails || {};
+            const isVerified = (channel && channel.statistics) ? (channel.statistics.subscriberCount > 100000) : false;
+            const data = {
+                video: {
+                    title: { view: s.title, edit: s.title },
+                    description: { view: s.description, edit: s.description },
+                    uploadDate: { view: formatDate(s.publishedAt), edit: formatDate(s.publishedAt) },
+                    hashtags: { view: (s.tags || []).filter(t => !t.includes(' ')).map(t => `#${t}`).join(' '), edit: (s.tags || []).map(t => `#${t}`).join(' ') },
+                    viewCount: { view: `${formatNumberWithUnit(stats.viewCount)} 回視聴`, edit: `${formatNumberWithUnit(stats.viewCount)} 回視聴` },
+                    liveViewers: { view: `${formatNumber(live.concurrentViewers)}人が視聴中`, edit: `${formatNumber(live.concurrentViewers)}人が視聴中` },
+                    likeCount: { view: formatNumber(stats.likeCount), edit: formatNumber(stats.likeCount) },
+                    commentCount: { view: `コメント ${formatNumber(stats.commentCount)}件`, edit: `コメント ${formatNumber(stats.commentCount)}件` },
+                    subscriberCount: { view: formatSubscriberCount(channel?.statistics?.subscriberCount), edit: formatSubscriberCount(channel?.statistics?.subscriberCount) }
+                },
+                channel: { name: { view: s.channelTitle, edit: s.channelTitle }, iconUrl: channel?.snippet?.thumbnails?.default?.url, isVerified: isVerified },
+                comments: []
+            };
+            if (commentsData && commentsData.items) {
+                data.comments = commentsData.items.map(item => {
+                    const c = item.snippet.topLevelComment.snippet, comment = {
+                        id: item.snippet.topLevelComment.id, authorName: c.authorDisplayName, authorIconUrl: c.authorProfileImageUrl,
+                        text: { view: c.textDisplay, edit: c.textOriginal }, likeCount: { view: formatNumber(c.likeCount), edit: c.likeCount || 0 }, replies: []
+                    };
+                    if (item.replies) { comment.replies = item.replies.comments.map(r => ({ id: r.id, authorName: r.snippet.authorDisplayName, authorIconUrl: r.snippet.authorProfileImageUrl, text: { view: r.snippet.textDisplay, edit: r.snippet.textOriginal }, likeCount: { view: formatNumber(r.snippet.likeCount), edit: r.snippet.likeCount || 0 } })); }
+                    return comment;
+                });
+            } return data;
+        }
+
+        function displayData(data) {
+            app.watch.player.src = `https://www.youtube.com/embed/${state.currentVideoId}`;
+            const setData = (el, viewVal, editVal) => {
+                if (!el) return;
+                const viewEl = el.querySelector('.view-element');
+                if (viewEl) viewEl.innerHTML = (viewVal || '').replace(/\n/g, '<br>');
+                const editEl = el.querySelector('.edit-element'); if (editEl) editEl.value = editVal;
+            };
+            const { video, channel, comments } = data;
+            setData(app.watch.title, video.title.view, video.title.edit);
+            setData(app.watch.hashtags, video.hashtags.view, video.hashtags.edit);
+            app.watch.channelIcon.src = channel.iconUrl;
+            
+            const channelNameView = app.watch.channelName.querySelector('.view-element');
+            Array.from(channelNameView.childNodes).forEach(node => { if(node.nodeType === Node.TEXT_NODE) node.remove(); });
+            channelNameView.prepend(document.createTextNode(channel.name.view));
+            const channelNameEdit = app.watch.channelName.querySelector('.edit-element');
+            channelNameEdit.value = channel.name.edit;
+
+            updateVerifiedBadge(channel.isVerified);
+            setData(app.watch.subscriberCount, video.subscriberCount.view, video.subscriberCount.edit);
+            setData(app.watch.likeCount, video.likeCount.view, video.likeCount.edit);
+            setData(app.watch.viewCount, video.viewCount.view, video.viewCount.edit);
+            setData(app.watch.liveViewers, video.liveViewers.view, video.liveViewers.edit);
+            setData(app.watch.uploadDate, video.uploadDate.view, video.uploadDate.edit);
+            setData(app.watch.description, video.description.view, video.description.edit);
+            setData(app.watch.commentCount, video.commentCount.view, video.commentCount.edit);
+            renderComments(comments);
+        }
         
-        function apiRequest(endpoint, params) { /* ... */ }
-        function processSearchResults(items) { /* ... */ }
-        function parseApiData(video, channel, commentsData) { /* ... */ }
-        function displayData(data) { /* ... */ }
-        function createVideoCard(video) { /* ... */ }
-        function createShortPlayer(short, channel) {
+        function renderComments(comments) {
+            app.watch.commentsContainer.innerHTML = '';
+            comments.forEach(commentData => app.watch.commentsContainer.appendChild(createCommentElement(commentData)));
+            app.watch.loadMoreCommentsBtn.style.display = state.commentsNextPageToken ? 'block' : 'none';
+        }
+
+        async function loadMoreComments() {
+            if (!state.commentsNextPageToken) return;
+            app.watch.loadMoreCommentsBtn.disabled = true;
+            app.watch.loadMoreCommentsBtn.textContent = '読み込み中...';
+            try {
+                const commentsData = await apiRequest('commentThreads', { part: 'snippet,replies', videoId: state.currentVideoId, order: 'relevance', pageToken: state.commentsNextPageToken });
+                state.commentsNextPageToken = commentsData.nextPageToken;
+                
+                commentsData.items.forEach(item => {
+                    const c = item.snippet.topLevelComment.snippet, commentData = {
+                        id: item.snippet.topLevelComment.id, authorName: c.authorDisplayName, authorIconUrl: c.authorProfileImageUrl,
+                        text: { view: c.textDisplay, edit: c.textOriginal }, likeCount: { view: formatNumber(c.likeCount), edit: c.likeCount || 0 }, replies: []
+                    };
+                    if (item.replies) { commentData.replies = item.replies.comments.map(r => ({ id: r.id, authorName: r.snippet.authorDisplayName, authorIconUrl: r.snippet.authorProfileImageUrl, text: { view: r.snippet.textDisplay, edit: r.snippet.textOriginal }, likeCount: { view: formatNumber(r.snippet.likeCount), edit: r.snippet.likeCount || 0 } })); }
+                    app.watch.commentsContainer.appendChild(createCommentElement(commentData));
+                });
+                
+                app.watch.loadMoreCommentsBtn.style.display = state.commentsNextPageToken ? 'block' : 'none';
+            } catch(e) { alert('コメントの読み込みに失敗しました: ' + e.message); } finally { app.watch.loadMoreCommentsBtn.disabled = false; app.watch.loadMoreCommentsBtn.textContent = 'さらに読み込む'; }
+        }
+        
+        function createVideoCard(video) {
+            const card = document.createElement('div'); card.className = 'video-card';
+            
+            const videoId = video.id.videoId || video.id;
+            const videoIsShort = isShort(video);
+            
+            card.addEventListener('click', () => {
+                if(videoIsShort) {
+                    navigateTo('shorts', { startVideoId: videoId });
+                } else {
+                    navigateTo('watch', { videoId: videoId });
+                }
+            });
+
+            const snippet = video.snippet, stats = video.statistics;
+            card.innerHTML = `<img class="video-thumbnail" src="${snippet.thumbnails.high.url}" alt="${snippet.title}"><div class="video-card-meta"><div><h3 class="video-card-title">${snippet.title}</h3><div class="video-card-channel">${snippet.channelTitle}</div><div class="video-card-stats">${stats ? `${formatNumberWithUnit(stats.viewCount)} 回視聴` : ''} • ${formatDate(snippet.publishedAt)}</div></div></div>`;
+            return card;
+        }
+
+        function createShortPlayer(short) {
             const wrapper = document.createElement('div');
             wrapper.className = 'short-player-wrapper';
             wrapper.dataset.videoId = short.id;
 
             const snippet = short.snippet;
             const stats = short.statistics;
-            const channelIconUrl = channel?.snippet?.thumbnails?.default?.url || '';
 
             wrapper.innerHTML = `
-                <video class="short-video-element" loop playsinline src="https://via.placeholder.com/360x640.mp4?text=Shorts+Player" poster="${snippet.thumbnails.high.url}"></video>
+                <video class="short-video-element" loop muted playsinline poster="${snippet.thumbnails.high.url}"></video>
                 <div class="short-ui-overlay">
                     <div class="short-info">
                         <div class="short-title">${snippet.title}</div>
                         <div class="short-channel">
-                            <img src="${channelIconUrl}" alt="">
+                            <img src="${snippet.thumbnails.default.url}" alt="">
                             <span>@${snippet.channelTitle.replace(/\s+/g, '')}</span>
                         </div>
                     </div>
                     <div class="short-actions">
                         <button class="short-action-btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-hand-thumbs-up" viewBox="0 0 16 16"><path d="M8.864.046C7.908-.193 7.02.53 6.956 1.466c-.072 1.051-.23 2.016-.428 2.59-.125.36-.479 1.013-1.04 1.639-.557.623-1.282 1.178-2.131 1.41C2.685 7.288 2 7.87 2 8.72v4.001c0 .845.682 1.464 1.448 1.545 1.07.114 1.564.415 2.068.723l.048.03c.272.165.578.348.97.484.397.136.861.217 1.466.217h3.5c.937 0 1.599-.477 1.934-1.064a1.86 1.86 0 0 0 .254-.912c0-.152-.023-.312-.077-.464.201-.263.38-.578.488-.901.11-.33.172-.762.004-1.149.069-.13.12-.269.159-.403.077-.27.113-.568.113-.857 0-.288-.036-.585-.113-.856a2 2 0 0 0-.138-.362 1.9 1.9 0 0 0 .234-1.734c-.206-.592-.682-1.1-1.2-1.272-.847-.282-1.803-.276-2.516-.211a10 10 0 0 0-.443.05 9.4 9.4 0 0 0-.062-4.509A1.38 1.38 0 0 0 9.125.111zM11.5 14.721H8c-.51 0-.863-.069-1.14-.164-.281-.097-.506-.228-.776-.393l-.04-.024c-.555-.339-1.198-.731-2.49-.868-.333-.036-.554-.29-.554-.55V8.72c0-.254.226-.543.62-.65 1.095-.3 1.977-.996 2.614-1.708.635-.71 1.064-1.475 1.238-1.978.243-.7.407-1.768.482-2.85.025-.362.36-.594.667-.518l.262.066c.16.04.258.143.288.255a8.34 8.34 0 0 1-.145 4.725.5.5 0 0 0 .595.644l.003-.001.014-.003.058-.014a9 9 0 0 1 1.036-.157c.663-.06 1.457-.054 2.11.164.175.058.45.3.57.65.107.308.087.67-.266 1.022l-.353.353.353.354c.043.043.105.141.154.315.048.167.075.37.075.581 0 .212-.027.414-.075.582-.05.174-.111.272-.154.315l-.353.353.353.354c.047.047.109.177.005.488a2.2 2.2 0 0 1-.505.805l-.353.353.353.354c.006.005.041.05.041.17a.9.9 0 0 1-.121.416c-.165.288-.503.56-1.066.56z"/></svg><span>${formatNumberWithUnit(stats.likeCount)}</span></button>
-                        <button class="short-action-btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-hand-thumbs-down" viewBox="0 0 16 16"><path d="M8.864 15.674c-.956.24-1.843-.484-1.908-1.42-.072-1.05-.23-2.015-.428-2.59-.125-.36-.479-1.012-1.04-1.638-.557-.624-1.282-1.179-2.131-1.41C2.685 8.432 2 7.85 2 7V3c0-.845.682-1.464 1.448-1.546 1.07-.113 1.564-.415 2.068-.723l.048-.029c.272-.166.578-.349.97-.484C6.931.08 7.395 0 8 0h3.5c.937 0 1.599.478 1.934 1.064.164.287.254.607.254.913 0 .152-.023.312-.077-.464.201.262.38.577.488.9.11.33.172.762.004 1.15.069.13.12.268.159.403.077.27.113.567.113.856s-.036.586-.113.856c-.035.12-.08.244-.138.363.394.571.418 1.2.234 1.733-.206.592-.682-1.1-1.2 1.272-.847.283-1.803.276-2.516.211a10 10 0 0 1-.443-.05 9.36 9.36 0 0 1-.062 4.51c-.138.508-.55.848-1.012.964zM11.5 1H8c-.51 0-.863.068-1.14.163-.281.097-.506.229-.776.393l-.04.025c-.555.338-1.198.73-2.49.868-.333.035-.554.29-.554.55V7c0 .255.226.543.62.65 1.095.3 1.977.997 2.614 1.709.635.71 1.064-1.475 1.238 1.977.243.7.407 1.768.482 2.85.025.362.36.595.667.518l.262-.065c.16-.04.258-.144.288-.255a8.34 8.34 0 0 0-.145-4.726.5.5 0 0 1 .595-.643h.003l.014.004.058.013a9 9 0 0 0 1.036.157c.663.06 1.457.054 2.11-.163.175-.059.45-.301.57-.651.107-.308.087-.67-.266-1.021L12.793 7l.353-.354c.043-.042.105-.14.154-.315.048-.167.075-.37.075-.581s-.027-.414-.075-.581c-.05-.174-.111-.273-.154-.315l-.353-.354.353-.354c.047-.047.109-.176.005-.488a2.2 2.2 0 0 0-.505-.804l-.353-.354.353-.354c.006-.005.041-.05.041-.17a.9.9 0 0 0-.121-.415C12.4 1.272 12.063 1 11.5 1"/></svg><span>低評価</span></button>
+                        <button class="short-action-btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-hand-thumbs-down" viewBox="0 0 16 16"><path d="M8.864 15.674c-.956.24-1.843-.484-1.908-1.42-.072-1.05-.23-2.015-.428-2.59-.125-.36-.479-1.012-1.04-1.638-.557-.624-1.282-1.179-2.131-1.41C2.685 8.432 2 7.85 2 7V3c0-.845.682-1.464 1.448-1.546 1.07-.113 1.564-.415 2.068-.723l.048-.029c.272-.166.578-.349.97-.484C6.931.08 7.395 0 8 0h3.5c.937 0 1.599.478 1.934 1.064.164.287.254.607.254.913 0 .152-.023.312-.077-.464.201.262.38.577.488.9.11.33.172.762.004 1.15.069.13.12.268.159.403.077.27.113.567.113.856s-.036.586-.113.856c-.035.12-.08.244-.138.363.394.571.418 1.2.234 1.733-.206.592-.682-1.1-1.2 1.272-.847.283-1.803.276-2.516.211a10 10 0 0 1-.443-.05 9.36 9.36 0 0 1-.062 4.51c-.138.508-.55.848-1.012.964zM11.5 1H8c-.51 0-.863.068-1.14.163-.281.097-.506.229-.776.393l-.04.025c-.555.338-1.198.73-2.49.868-.333.035-.554.29-.554.55V7c0 .255.226.543.62.65 1.095.3 1.977.997 2.614 1.709.635.71 1.064-1.475 1.238 1.977.243.7.407 1.768.482-2.85.025.362.36.595.667.518l.262-.065c.16-.04.258-.144.288-.255a8.34 8.34 0 0 0-.145-4.726.5.5 0 0 1 .595-.643h.003l.014.004.058.013a9 9 0 0 0 1.036.157c.663.06 1.457.054 2.11-.163.175-.059.45-.301.57-.651.107-.308.087-.67-.266-1.021L12.793 7l.353-.354c.043-.042.105-.14.154-.315.048-.167.075-.37.075-.581s-.027-.414-.075-.581c-.05-.174-.111-.273-.154-.315l-.353-.354.353-.354c.047-.047.109-.176.005-.488a2.2 2.2 0 0 0-.505-.804l-.353-.354.353-.354c.006-.005.041-.05.041-.17a.9.9 0 0 0-.121-.415C12.4 1.272 12.063 1 11.5 1"/></svg><span>低評価</span></button>
                         <button class="short-action-btn" data-video-id="${short.id}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chat-right-text" viewBox="0 0 16 16"><path d="M2 1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h9.586a2 2 0 0 1 1.414.586l2 2V2a1 1 0 0 0-1-1zm12-1a2 2 0 0 1 2 2v12.793a.5.5 0 0 1-.854.353l-2.853-2.853a1 1 0 0 0-.707-.293H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2z"/><path d="M3 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5M3 6a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 6m0 2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5"/></svg><span>${formatNumberWithUnit(stats.commentCount)}</span></button>
                     </div>
                 </div>
@@ -598,7 +723,116 @@
             return wrapper;
         }
 
-        // --- All other utility functions ... ---
+        // ... rest of the JS functions
+        function toggleEditMode() {
+            state.isEditMode = !state.isEditMode;
+            app.pages.watch.classList.toggle('edit-mode', state.isEditMode);
+            app.watch.editModeToggle.innerHTML = state.isEditMode ? ICONS.view : ICONS.edit;
+            app.watch.saveButton.style.display = state.isEditMode ? 'flex' : 'none';
+        }
+        
+        function saveChanges() {
+            if (!state.isEditMode) return;
+            const getEditVal = id => getEl(id).querySelector('.edit-element').value;
+            const savedData = JSON.parse(JSON.stringify(state.originalData));
+            const updateField = (field, id) => { const value = getEditVal(id); field.view = value; field.edit = value; };
+            updateField(savedData.video.title, 'videoTitle'); updateField(savedData.video.hashtags, 'videoHashtags');
+            updateField(savedData.channel.name, 'channelName'); updateField(savedData.video.subscriberCount, 'subscriberCount');
+            updateField(savedData.video.likeCount, 'likeCount'); updateField(savedData.video.viewCount, 'viewCount');
+            updateField(savedData.video.uploadDate, 'uploadDate'); updateField(savedData.video.description, 'videoDescription');
+            updateField(savedData.video.commentCount, 'commentCount');
+            savedData.channel.iconUrl = app.watch.channelIcon.src;
+            savedData.channel.isVerified = app.watch.verifiedSwitch.checked;
+            const updateCommentData = (comment) => {
+                const el = getEl(comment.id); if (!el) return;
+                const textVal = el.querySelector('.comment-text .edit-element').value, likeVal = el.querySelector('.comment-like-count .edit-element').value;
+                comment.text.view = textVal; comment.text.edit = textVal;
+                comment.likeCount.view = likeVal; comment.likeCount.edit = likeVal;
+            };
+            savedData.comments.forEach(comment => {
+                updateCommentData(comment);
+                if (comment.replies) { comment.replies.forEach(reply => updateCommentData(reply)); }
+            });
+            localStorage.setItem(`yt-editor-${state.currentVideoId}`, JSON.stringify(savedData));
+            alert('変更を保存しました！'); toggleEditMode(); displayData(savedData);
+        }
+
+        function resetVideoChanges() { if (confirm('この動画への変更をリセットしますか？')) { localStorage.removeItem(`yt-editor-${state.currentVideoId}`); displayData(state.originalData); alert('リセットしました。'); } }
+        
+        function resetAllChanges() {
+            if (confirm('警告！\n保存されている全ての動画の変更がリセットされます。\nこの操作は元に戻せません。よろしいですか？')) {
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('yt-editor-')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                alert('すべての変更がリセットされました。');
+                if (state.currentPage === 'watch') {
+                    displayData(state.originalData);
+                }
+            }
+        }
+        
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => { app.watch.channelIcon.src = e.target.result; };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleVerifiedToggle() { updateVerifiedBadge(this.checked); }
+
+        function updateVerifiedBadge(isVerified) {
+            const nameContainer = app.watch.channelName.querySelector('.view-element');
+            nameContainer.classList.toggle('is-verified', isVerified);
+            app.watch.verifiedSwitch.checked = isVerified;
+        }
+
+        async function handleSearchInput() {
+            const query = app.search.input.value.trim();
+            if (query.length < 2) return app.search.suggestions.style.display = 'none';
+            try {
+                const data = await apiRequest('search', { part: 'snippet', q: query, type: 'video', maxResults: 5 });
+                app.search.suggestions.innerHTML = '';
+                data.items.forEach(item => {
+                    const div = document.createElement('div'); div.className = 'suggestion-item';
+                    div.textContent = item.snippet.title;
+                    div.addEventListener('click', (e) => { e.stopPropagation(); app.search.input.value = item.snippet.title; app.search.suggestions.style.display = 'none'; handleSearchSubmit(); });
+                    app.search.suggestions.appendChild(div);
+                });
+                app.search.suggestions.style.display = 'block';
+            } catch(e) { console.error("Suggestion error:", e); }
+        }
+
+        function handleSearchSubmit() {
+            const query = app.search.input.value.trim();
+            if (!query) return;
+            app.search.suggestions.style.display = 'none';
+            navigateTo('home', { query });
+        }
+
+        function startLiveChat(liveChatId) {
+            state.currentLiveChat.id = liveChatId; state.currentLiveChat.nextPageToken = null; app.watch.liveChat.messages.innerHTML = '';
+            const fetchChat = async () => {
+                try {
+                    const params = { liveChatId: state.currentLiveChat.id, part: 'snippet,authorDetails' };
+                    if (state.currentLiveChat.nextPageToken) params.pageToken = state.currentLiveChat.nextPageToken;
+                    const chatData = await apiRequest('liveChat/messages', params);
+                    chatData.items.forEach(item => {
+                        const messageEl = document.createElement('div'); messageEl.className = 'chat-message';
+                        messageEl.innerHTML = `<img src="${item.authorDetails.profileImageUrl}" alt=""><div><span class="chat-message-author">${item.authorDetails.displayName}</span><span class="chat-message-text">${item.snippet.displayMessage}</span></div>`;
+                        app.watch.liveChat.messages.appendChild(messageEl);
+                    });
+                    app.watch.liveChat.messages.scrollTop = app.watch.liveChat.messages.scrollHeight;
+                    state.currentLiveChat.nextPageToken = chatData.nextPageToken;
+                } catch (e) { console.error('Live chat fetch error:', e); if(state.currentLiveChat.interval) clearInterval(state.currentLiveChat.interval); }
+            };
+            fetchChat();
+            state.currentLiveChat.interval = setInterval(fetchChat, 5000);
+        }
+
         function debounce(fn, delay) { let timeoutId; return function(...args) { if (timeoutId) clearTimeout(timeoutId); timeoutId = setTimeout(() => fn.apply(this, args), delay); }; }
         function formatNumber(numStr) { return Number(numStr || 0).toLocaleString('ja-JP'); }
         function formatNumberWithUnit(numStr) {
